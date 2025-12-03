@@ -11,7 +11,13 @@ import { blockElementSignal } from '@core/signal/blockElement';
 import type { InputAttachment } from '@core/store/cacheChannelInput';
 import type { Message } from '@service-comms/generated/models';
 import { createCallback } from '@solid-primitives/rootless';
-import { type Accessor, createEffect, For, type Setter } from 'solid-js';
+import {
+  type Accessor,
+  createEffect,
+  createSignal,
+  For,
+  type Setter,
+} from 'solid-js';
 import type { SetStoreFunction } from 'solid-js/store';
 import { Portal } from 'solid-js/web';
 import type { VirtualizerHandle } from 'virtua/solid';
@@ -35,6 +41,9 @@ export function ReplyInputsPortaler(props: ReplyInputsPortalerProps) {
   const postTypingUpdate_ = createCallback(postTypingUpdate);
   const sendMessage_ = createCallback(sendMessage);
   const blockRef = blockElementSignal.get;
+
+  const [focusedReplyInputThreadId, setFocusedReplyInputThreadId] =
+    createSignal<string>();
 
   const onSend =
     (threadId: string) => async (args: Parameters<typeof sendMessage>[0]) => {
@@ -104,6 +113,8 @@ export function ReplyInputsPortaler(props: ReplyInputsPortalerProps) {
     (lastMessageBody as HTMLElement).focus();
   };
 
+  let replyFocusTimeout: ReturnType<typeof setTimeout> | undefined;
+
   return (
     <For
       each={Object.keys(props.threadViewStore).filter(
@@ -115,6 +126,7 @@ export function ReplyInputsPortaler(props: ReplyInputsPortalerProps) {
         // TODO: this should only fire if this reply input was focused
         createEffect((prev) => {
           if (
+            focusedReplyInputThreadId() === threadId &&
             props.threadViewStore[threadId].replyInputMountTarget &&
             prev &&
             prev !== props.threadViewStore[threadId].replyInputMountTarget
@@ -153,6 +165,15 @@ export function ReplyInputsPortaler(props: ReplyInputsPortalerProps) {
                     replyInputShouldFocus: false,
                   }))
                 }
+                onFocus={() => {
+                  if (replyFocusTimeout) clearTimeout(replyFocusTimeout);
+                  setFocusedReplyInputThreadId(threadId);
+                }}
+                onBlur={() => {
+                  replyFocusTimeout = setTimeout(() => {
+                    setFocusedReplyInputThreadId(undefined);
+                  }, 100);
+                }}
                 onStartTyping={() => postTypingUpdate_('start', threadId)}
                 onStopTyping={() => postTypingUpdate_('stop', threadId)}
                 inputAttachments={{
