@@ -6523,6 +6523,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "properties"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "macro_db_migrator",
+ "macro_uuid",
+ "mockall",
+ "models_properties",
+ "serde_json",
+ "sqlx",
+ "system_properties",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "properties_db_client"
 version = "0.1.0"
 dependencies = [
@@ -6563,6 +6580,7 @@ dependencies = [
  "model",
  "models_permissions",
  "models_properties",
+ "properties",
  "properties_db_client",
  "secretsmanager_client",
  "serde",
