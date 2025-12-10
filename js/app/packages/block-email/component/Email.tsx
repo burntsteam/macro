@@ -82,10 +82,11 @@ export function Email(props: EmailProps) {
 
   const [searchParams] = useSearchParams();
   const searchParamsMessageId = () => {
-    if (typeof searchParams.message_id === 'string') {
-      return searchParams.message_id;
-    } else if (Array.isArray(searchParams.message_id)) {
-      return searchParams.message_id[0];
+    const messageID = searchParams[URL_PARAMS.messageId];
+    if (typeof messageID === 'string') {
+      return messageID;
+    } else if (Array.isArray(messageID)) {
+      return messageID[0];
     }
     return undefined;
   };
@@ -322,11 +323,15 @@ export function Email(props: EmailProps) {
     const messages = untrack(() => filteredMessages());
     if (!messages) return;
     if (container && messages.length > 0) {
-      scrollToLastMessage(container, behavior);
+      // We need to scroll after focus because the scroll needs to account
+      // for the size of the message with the focused styling applied
       const lastMessageId = getLastMessageId(messages);
       if (lastMessageId) {
         setFocusedMessageId(lastMessageId);
       }
+      queueMicrotask(() => {
+        scrollToLastMessage(container, behavior);
+      });
     }
   };
 

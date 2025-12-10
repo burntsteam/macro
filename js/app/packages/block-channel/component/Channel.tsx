@@ -1,5 +1,6 @@
 import { useGlobalNotificationSource } from '@app/component/GlobalAppState';
 import { useNavigatedFromJK } from '@app/component/useNavigatedFromJK';
+import { URL_PARAMS } from '@block-channel/constants';
 import type { ChannelData } from '@block-channel/definition';
 import {
   latestActivitySignal,
@@ -88,7 +89,7 @@ export function Channel(props: { data: Required<ChannelData> }) {
   const channelId = useBlockId();
   const { track } = withAnalytics();
   let containerRef!: HTMLDivElement;
-  const [_searchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [channelInputAttachmentsStore, setChannelInputAttachmentsStore] =
     createStore<Record<string, InputAttachment[]>>({});
   // All messages, including threads, in order of how they should be displayed, i.e. thread children are placed after their parent message
@@ -100,10 +101,26 @@ export function Channel(props: { data: Required<ChannelData> }) {
   const notificationSource = useGlobalNotificationSource();
 
   const blockHandle = blockHandleSignal.get;
-  const [targetMessage, setTargetMessage] = createSignal<{
-    messageId: string;
-    threadId?: string;
-  }>();
+
+  const initialTargetMessage = () => {
+    const messageID = searchParams[URL_PARAMS.message];
+    const threadID = searchParams[URL_PARAMS.thread];
+
+    if (!messageID) return;
+
+    return {
+      messageId: Array.isArray(messageID) ? messageID[0] : messageID,
+      threadId: Array.isArray(threadID) ? threadID[0] : threadID,
+    };
+  };
+
+  const [targetMessage, setTargetMessage] = createSignal<
+    | {
+        messageId: string;
+        threadId?: string;
+      }
+    | undefined
+  >(initialTargetMessage());
 
   createMethodRegistration(blockHandle, {
     goToLocationFromParams: async (params: Record<string, any>) => {

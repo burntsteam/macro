@@ -59,6 +59,9 @@ const LONG_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 });
 
+// The size of a message with a profile picture and a one line message
+const BASE_ITEM_SIZE = 50;
+
 const clampIndex = (value: number, minValue: number, maxValue: number) =>
   Math.min(Math.max(value, minValue), maxValue);
 
@@ -218,27 +221,28 @@ export function MessageList(props: MessageListProps) {
 
       const { messageId: targetMessageId, threadId } = target || {};
 
-      // If we have a target message, scroll to it and focus it
-      if (targetMessageId) {
-        const index = props
-          .orderedMessages()
-          ?.findIndex((m) => m.id === targetMessageId);
+      if (!targetMessageId) return;
 
-        if (index >= 0) {
-          if (threadId) {
-            setThreadViewStore(threadId, (prev) => ({
-              ...prev,
-              threadExpanded: true,
-            }));
-          }
-          if (scrollTimeoutId) clearTimeout(scrollTimeoutId);
-          virtualHandle()?.scrollToIndex(index, {
-            align: 'center',
-          });
-          setTargetIndex(index);
-          return;
-        }
+      // If we have a target message, scroll to it and focus it
+      const index = props
+        .orderedMessages()
+        ?.findIndex((m) => m.id === targetMessageId);
+
+      if (index === -1) return;
+
+      if (threadId) {
+        setThreadViewStore(threadId, (prev) => ({
+          ...prev,
+          threadExpanded: true,
+        }));
       }
+
+      if (scrollTimeoutId) clearTimeout(scrollTimeoutId);
+
+      virtualHandle()?.scrollToIndex(index, {
+        align: 'center',
+      });
+      setTargetIndex(index);
     },
     5
   );
@@ -526,7 +530,6 @@ export function MessageList(props: MessageListProps) {
   // );
 
   const [size, setSize] = createSignal<DOMRect>();
-  const [initialized, setInitialized] = createSignal(false);
 
   // scroll to bottom on size change, if the user is near the bottom
   createEffect(
@@ -624,11 +627,10 @@ export function MessageList(props: MessageListProps) {
         onPointerDown={markUserScrolled}
         use:observedSize={{
           setSize: setSize,
-          setInitialized: setInitialized,
         }}
       >
         <Switch fallback={<EmptyMessageList />}>
-          <Match when={initialized() && props.messages.length > 0 && size()}>
+          <Match when={props.messages.length > 0}>
             <VList
               ref={setVirtualHandle}
               style={{
@@ -639,6 +641,7 @@ export function MessageList(props: MessageListProps) {
                 'overflow-y': 'scroll',
               }}
               class="scrollbar-hidden"
+              itemSize={BASE_ITEM_SIZE}
               data-channel-message-list
               data={rows() ?? []}
               overscan={10}
