@@ -155,7 +155,9 @@ function getEntityIcon(entity: CombinedEntity) {
     case 'item': {
       const blockName =
         entity.data.type === 'document'
-          ? fileTypeToBlockName(entity.data.fileType, true)
+          ? entity.data.subType === 'task'
+            ? 'task'
+            : fileTypeToBlockName(entity.data.fileType, true)
           : entity.data.type === 'chat'
             ? 'chat'
             : entity.data.type === 'project'
@@ -208,6 +210,12 @@ export function PropertyEntitySelector(props: EntityInputProps) {
     if (specificEntityType === 'THREAD') {
       // TODO: Implement thread data source
       return [];
+    }
+
+    if (specificEntityType === 'TASK') {
+      return history()
+        .filter((item) => item.type === 'document' && item.subType === 'task')
+        .map(entityMapper('item'));
     }
 
     const itemTypes: EntityType[] = ['DOCUMENT', 'PROJECT', 'CHAT'];
