@@ -872,16 +872,16 @@ export function BaseInput(props: {
                   <Spinner class="w-5 h-5 animate-spin cursor-disabled" />
                 }
               >
-                <div class="flex flex-row items-center gap-0.5">
-                  <span>Send + </span>
-                  <CheckIcon class="size-[1lh]" />
+                <div class="flex justify-center items-center gap-1">
+                  <span>Send & done</span>
+                  <CheckIcon class="size-4" />
                 </div>
               </Show>
             </TextButton>
             <DropdownMenu>
               <DropdownMenu.Trigger>
-                <div class="w-8 min-h-8 flex justify-center items-center h-full border-r border-t border-b border-edge">
-                  <CaretDown class="size-4 text-edge" />
+                <div class="w-8 min-h-8 flex justify-center items-center h-full border-r border-t border-b border-ink hover:bg-hover">
+                  <CaretDown class="size-4 text-ink" />
                 </div>
               </DropdownMenu.Trigger>
               <DropdownMenuContent>
