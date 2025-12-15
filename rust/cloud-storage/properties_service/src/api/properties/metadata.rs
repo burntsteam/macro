@@ -46,7 +46,7 @@ pub async fn get_document_metadata_properties(
     let owner = (!document_metadata.owner.is_empty())
         .then(|| EntityReference::new(document_metadata.owner, EntityType::User));
     metadata_properties.push(create_metadata_property_entity_ref(
-        metadata::DOCUMENT_OWNER,
+        metadata::OWNER,
         models_properties::DataType::Entity,
         owner,
         entity_type,
@@ -55,7 +55,7 @@ pub async fn get_document_metadata_properties(
 
     // 3. Created time property
     metadata_properties.push(create_metadata_property_date(
-        metadata::DOCUMENT_CREATED_AT,
+        metadata::CREATED_AT,
         models_properties::DataType::Date,
         Some(document_metadata.created_at),
         entity_type,
@@ -63,7 +63,7 @@ pub async fn get_document_metadata_properties(
 
     // 4. Last updated time property
     metadata_properties.push(create_metadata_property_date(
-        metadata::DOCUMENT_LAST_UPDATED,
+        metadata::LAST_UPDATED,
         models_properties::DataType::Date,
         Some(document_metadata.updated_at),
         entity_type,
@@ -132,6 +132,71 @@ pub async fn get_thread_metadata_properties(
             models_properties::DataType::Number,
             thread_metadata.message_count,
             entity_type,
+        ),
+    ];
+
+    Ok(metadata_properties)
+}
+
+/// Get project metadata properties from macrodb
+#[tracing::instrument(skip(db), err)]
+pub async fn get_project_metadata_properties(
+    db: &Pool<Postgres>,
+    project_id: &str,
+) -> Result<Vec<EntityPropertyWithDefinition>, MetadataError> {
+    let project_metadata =
+        properties_db_client::project_metadata::get::get_project_metadata(db, project_id)
+            .await?
+            .ok_or(MetadataError::NotFound)?;
+
+    let entity_type = EntityType::Project;
+
+    // 1. Project name property
+    let name = (!project_metadata.name.is_empty()).then_some(project_metadata.name);
+
+    // 2. Owner property
+    let owner = (!project_metadata.owner.is_empty())
+        .then(|| EntityReference::new(project_metadata.owner, EntityType::User));
+
+    // 5. Parent project property
+    let parent = project_metadata
+        .parent_id
+        .map(|id| EntityReference::new(id, EntityType::Project));
+
+    let metadata_properties = vec![
+        create_metadata_property_str(
+            metadata::PROJECT_NAME,
+            models_properties::DataType::String,
+            name,
+            entity_type,
+        ),
+        create_metadata_property_entity_ref(
+            metadata::OWNER,
+            models_properties::DataType::Entity,
+            owner,
+            entity_type,
+            Some(EntityType::User),
+        ),
+        // 3. Created time property
+        create_metadata_property_date(
+            metadata::CREATED_AT,
+            models_properties::DataType::Date,
+            Some(project_metadata.created_at),
+            entity_type,
+        ),
+        // 4. Last updated time property
+        create_metadata_property_date(
+            metadata::LAST_UPDATED,
+            models_properties::DataType::Date,
+            Some(project_metadata.updated_at),
+            entity_type,
+        ),
+        create_metadata_property_entity_ref(
+            metadata::PROJECT_PARENT,
+            models_properties::DataType::Entity,
+            parent,
+            entity_type,
+            Some(EntityType::Project),
         ),
     ];
 
