@@ -340,7 +340,6 @@ export function prepareEmailBody(
   mentions: DocumentMentionInfo[];
 } | null {
   if (!editor) return null;
-
   const generatedHtml = editor.read(() => {
     return $generateHtmlFromNodes(editor);
   });
@@ -350,7 +349,7 @@ export function prepareEmailBody(
   // Convert Macro document mentions to HTML links in the parsed DOM
   const mentions = convertMentionsToLinks(parsed.body);
 
-  if (appendReply) {
+  if (appendReply && !parsed.body.querySelector('.macro_quote')) {
     const appendedReplyElement = getAppendedReplyElement(
       appendReply.replyingTo,
       appendReply.replyType
@@ -366,4 +365,11 @@ export function prepareEmailBody(
   const bodyText = parsed.body.firstChild?.textContent ?? '';
 
   return { bodyHtml, bodyText, mentions };
+}
+
+export function prepareMacroBody(bodyMacro: string): string {
+  // Remove macro-quote blocks from the markdown string
+  // We want these in the HTML, but not in body_macro
+  // TODO (seamus + peter) Add logic for binding a markdown signal that skips certain transforms
+  return bodyMacro.replace(/<macro-quote>.*?<\/macro-quote>/gs, '').trim();
 }

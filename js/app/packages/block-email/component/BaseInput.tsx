@@ -85,6 +85,7 @@ import {
   appendItemsAsMacroMentions,
   clearEmailBody,
   prepareEmailBody,
+  prepareMacroBody,
   registerAppendPreviousEmail,
 } from '../util/prepareEmailBody';
 import { convertEmailRecipientToContactInfo } from '../util/recipientConversion';
@@ -451,11 +452,13 @@ export function BaseInput(props: {
     pendingMentions = prepared.mentions;
     setShouldMarkDoneOnSuccess(markDone);
 
+    const processedMacroBody = prepareMacroBody(bodyMacro());
+
     sendMutation.mutate({
       message: {
         bcc,
         body_html: prepared.bodyHtml,
-        body_macro: bodyMacro(),
+        body_macro: processedMacroBody,
         body_text: prepared.bodyText,
         cc,
         provider_id: props.draft?.provider_id,
