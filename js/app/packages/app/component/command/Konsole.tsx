@@ -99,7 +99,7 @@ export function KommandMenu() {
         <Popover.Portal>
           <CommandWindow>
             <Popover.Content>
-              <div class="bg-dialog mt-[25vh] w-6xl max-w-[90vw] max-h-[75vh] overflow-hidden">
+              <div class="mt-[25vh] w-6xl max-w-[90vw] max-h-[75vh] overflow-hidden">
                 <ClippedPanel tl active>
                   <KommandMenuInner commandKRef={commandKRef} />
                 </ClippedPanel>
