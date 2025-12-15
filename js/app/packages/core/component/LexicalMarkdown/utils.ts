@@ -1176,3 +1176,80 @@ export const $isAtEndOfTextNode = (selection: RangeSelection) => {
   }
   return false;
 };
+
+const $singleLineNode = (node: ElementNode): ElementNode | null => {
+  if ($isParagraphNode(node)) {
+    const text = node.getTextContent().trim();
+    if (text === '') return null;
+
+    node.clear();
+    node.append($createTextNode(text.replace(/\s+/g, ' ')));
+    return node;
+  }
+
+  // text first text-ful list item and flatten to parent list
+  if ($isListNode(node)) {
+    const items = node.getChildren();
+
+    for (const item of items) {
+      if (!$isListItemNode(item)) continue;
+
+      const text = item.getTextContent().trim();
+      if (!text) continue;
+
+      item.clear();
+      item.append($createTextNode(text));
+
+      node.clear();
+      node.append(item);
+
+      return node;
+    }
+
+    return null;
+  }
+
+  // take first line with text
+  if ($isCodeNode(node)) {
+    const text = node.getTextContent().trim().split('\n')[0];
+    if (!text) return null;
+    node.clear();
+    node.append($createTextNode(text));
+    return node;
+  }
+
+  const text = node.getTextContent().trim();
+  if (!text) return null;
+
+  const p = $createParagraphNode();
+  p.append($createTextNode(text));
+  return p;
+};
+
+export function forceSingleLine(editor: LexicalEditor) {
+  editor.update(
+    () => {
+      const root = $getRoot();
+      const rootChildren = root.getChildren();
+
+      let firstChild: ElementNode | null = null;
+
+      for (const child of rootChildren) {
+        if (!$isElementNode(child)) continue;
+        const normalized = $singleLineNode(child);
+        if (normalized) {
+          firstChild = normalized;
+          break;
+        }
+      }
+
+      root.clear();
+      if (firstChild) {
+        root.append(firstChild);
+      } else {
+        root.append($createParagraphNode().append($createTextNode('')));
+      }
+    },
+    { discrete: true, tag: 'force-single-line' }
+  );
+}
