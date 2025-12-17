@@ -254,8 +254,7 @@ export function useTabAttachments(): Accessor<ChatAttachmentWithName[]> {
   const combinedAttachments = createMemo(() => {
     const tabs = tabAttachments();
     const existingAttachments = new Set(tabs.map((a) => a.attachmentId));
-    const queriedEmails =
-      emailQuery.isLoading || emailQuery.isError ? [] : (emailQuery.data ?? []);
+    const queriedEmails = emailQuery.isSuccess ? (emailQuery.data ?? []) : [];
     const newEmails = queriedEmails.filter(
       (e) => !existingAttachments.has(e.attachmentId)
     );
