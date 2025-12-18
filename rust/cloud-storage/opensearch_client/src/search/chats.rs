@@ -14,10 +14,7 @@ use crate::{
 
 use crate::SearchOn;
 use models_opensearch::{SearchEntityType, SearchIndex};
-use opensearch_query_builder::{
-    BoolQueryBuilder, FieldSort, ScoreWithOrderSort, SearchRequest, SortOrder, SortType,
-    ToOpenSearchJson,
-};
+use opensearch_query_builder::{BoolQueryBuilder, SearchRequest, ToOpenSearchJson};
 use serde_json::Value;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -43,14 +40,6 @@ impl SearchQueryConfig for ChatSearchConfig {
     const USER_ID_KEY: &'static str = "user_id";
     const TITLE_KEY: &'static str = "name";
     const ENTITY_INDEX: SearchEntityType = SearchEntityType::Chats;
-
-    fn default_sort_types<'a>() -> Vec<SortType<'a>> {
-        vec![
-            SortType::ScoreWithOrder(ScoreWithOrderSort::new(SortOrder::Desc)),
-            SortType::Field(FieldSort::new(Self::ID_KEY, SortOrder::Asc)),
-            SortType::Field(FieldSort::new("chat_message_id", SortOrder::Asc)),
-        ]
-    }
 }
 
 pub(crate) struct ChatQueryBuilder {
