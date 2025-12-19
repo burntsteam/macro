@@ -1,15 +1,17 @@
 import type { ChannelData } from '@block-channel/definition';
 import { withAnalytics } from '@coparse/analytics';
 import { TrackingEvents } from '@coparse/analytics/src/types/TrackingEvents';
-import { type BlockName, createBlockMemo, createBlockStore } from '@core/block';
+import { createBlockMemo, createBlockStore } from '@core/block';
 import { useChannelsContext } from '@core/component/ChannelsProvider';
 import {
   type InputAttachment,
   isStaticAttachmentType,
 } from '@core/store/cacheChannelInput';
 import { isErr } from '@core/util/maybeResult';
+import { getImageDimensions, getVideoDimensions } from '@core/util/media';
 import { useSendMessageMutation } from '@queries/channel/message';
 import { commsServiceClient } from '@service-comms/client';
+import type { NewAttachment } from '@service-comms/generated/models';
 import type { Attachment } from '@service-comms/generated/models/attachment';
 import type { Channel } from '@service-comms/generated/models/channel';
 import type { ChannelParticipant } from '@service-comms/generated/models/channelParticipant';
@@ -236,22 +238,48 @@ export function useSendChannelMessageAction() {
     const channelId = channelStore.get.id;
     if (!channelId) return;
 
-    const attachmentsToSend = attachments
-      .map((a) => ({
-        entity_id: a.id,
-        entity_type: isStaticAttachmentType(a.blockName)
+    const attachmentsToSend = await Promise.allSettled(
+      attachments.map(async (a) => {
+        const attachmentType = isStaticAttachmentType(a.blockName)
           ? a.blockName
-          : blockNameToItemType(a.blockName as BlockName),
-      }))
-      .filter((a) => a.entity_type !== undefined) as {
-      entity_id: string;
-      entity_type: string;
-    }[];
+          : blockNameToItemType(a.blockName);
+
+        if (!attachmentType) return;
+
+        let attachment: NewAttachment = {
+          entity_id: a.id,
+          entity_type: attachmentType,
+        };
+
+        if (!a.file) return attachment;
+
+        if (
+          attachmentType !== 'static/image' &&
+          attachmentType !== 'static/video'
+        ) {
+          return attachment;
+        }
+
+        const dimensions =
+          attachmentType === 'static/image'
+            ? await getImageDimensions(a.file)
+            : await getVideoDimensions(a.file);
+
+        attachment.width = dimensions.width;
+        attachment.height = dimensions.height;
+
+        return attachment;
+      })
+    );
+
+    const filteredAttachements = attachmentsToSend
+      .map((r) => (r.status === 'fulfilled' ? r.value : undefined))
+      .filter((r) => r !== undefined);
 
     const data = await mutation.mutateAsync({
       channelID: channelId,
       message: {
-        attachments: attachmentsToSend,
+        attachments: filteredAttachements,
         content: content ?? '',
         thread_id: threadId,
         mentions: mentions ?? [],
