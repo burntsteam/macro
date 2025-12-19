@@ -23,6 +23,7 @@ import { useUserId } from '@service-gql/client';
 import { blockNameToItemType } from '@service-storage/client';
 import { createCallback } from '@solid-primitives/rootless';
 import { toast } from 'core/component/Toast/Toast';
+import type { Accessor } from 'solid-js';
 import { updateActivityOnMessageReceived } from './activity';
 import { initializeAttachments, messageAttachmentsStore } from './attachment';
 import { messageToReactionStore } from './reactions';
@@ -207,7 +208,7 @@ export type SendMessageArgs = {
   mentions?: SimpleMention[];
 };
 
-export function useSendChannelMessageAction() {
+export function useSendChannelMessageAction(channelID: Accessor<string>) {
   const optimisticSend = createCallback(optimisticChannelMessage);
   const channelsContext = useChannelsContext();
   const userId = useUserId();
@@ -235,8 +236,8 @@ export function useSendChannelMessageAction() {
   }: SendMessageArgs) => {
     if (!userId) return;
     if (!isMessageSendable(content, attachments)) return;
-    const channelId = channelStore.get.id;
-    if (!channelId) return;
+
+    const channelId = channelID();
 
     const attachmentsToSend = await Promise.allSettled(
       attachments.map(async (a) => {
