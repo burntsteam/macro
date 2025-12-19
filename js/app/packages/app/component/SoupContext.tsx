@@ -97,6 +97,28 @@ export type UnifiedListContext = {
   _setNavigateThroughList: (fn: NavigateListFn) => void;
 };
 
+export function createStubSoupContext(): UnifiedListContext {
+  return {
+    viewsDataStore: createStore({})[0],
+    setViewDataStore: () => {},
+    selectedView: () => '',
+    setSelectedView: () => {},
+    virtualizerHandleSignal: createSignal(),
+    entityListRefSignal: createSignal(),
+    entitiesSignal: createSignal(),
+    emailViewSignal: createSignal<PreviewViewStandardLabel>('all'),
+    showHelpDrawer: () => new Set(),
+    setShowHelpDrawer: () => {},
+    actionRegistry: createEntityActionRegistry(),
+    navigateThroughList: async () => ({
+      success: false,
+      type: '',
+      entity: undefined,
+    }),
+    _setNavigateThroughList: () => {},
+  };
+}
+
 const DEFAULT_VIEW_ID: DefaultView = 'signal';
 
 const DEFAULT_VIEW_IDS_SET = new Set(VIEWCONFIG_DEFAULTS_IDS);
