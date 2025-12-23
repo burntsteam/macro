@@ -112,7 +112,10 @@ import {
   type SetStoreFunction,
   unwrap,
 } from 'solid-js/store';
-import { EntityWithEverything } from '../../macro-entity/src/components/EntityWithEverything';
+import {
+  ENTITY_HEIGHT,
+  EntityWithEverything,
+} from '../../macro-entity/src/components/EntityWithEverything';
 import {
   resetCommandCategoryIndex,
   searchCategories,
@@ -1465,6 +1468,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
             viewId={view()?.id}
             searchText={searchText()}
             hasRefinementsFromBase={isViewConfigChanged()}
+            entityMinHeight={ENTITY_HEIGHT}
           >
             {(innerProps) => {
               const displayDoneButton = () => {
