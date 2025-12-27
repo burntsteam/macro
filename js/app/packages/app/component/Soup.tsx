@@ -31,6 +31,7 @@ import {
   useQueryClient as useEntityQueryClient,
 } from '@macro-entity';
 import { createEffectOnEntityTypeNotification } from '@notifications';
+import { invalidateEntityNotifications } from '@queries/notification/user-notifications';
 import { storageServiceClient } from '@service-storage/client';
 import { Navigate } from '@solidjs/router';
 import { useMutation, useQueryClient } from '@tanstack/solid-query';
@@ -311,11 +312,7 @@ export function Soup() {
       entityQueryClient.invalidateQueries({
         queryKey: queryKeys.all.channel,
       });
-      entityQueryClient.invalidateQueries({
-        queryKey: queryKeys.notification({
-          entity_id: notification.entity_id,
-        }),
-      });
+      invalidateEntityNotifications(notification.entity_id);
     }
   );
 
