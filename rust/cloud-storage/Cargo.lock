@@ -5615,6 +5615,7 @@ dependencies = [
  "sqlx",
  "strum",
  "thiserror 2.0.17",
+ "tracing",
  "utoipa",
  "uuid",
 ]
@@ -6589,13 +6590,18 @@ name = "properties"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "comms_service_client",
+ "email_db_client",
  "macro_db_migrator",
+ "macro_middleware",
  "macro_uuid",
  "mockall",
+ "models_permissions",
  "models_properties",
  "serde_json",
  "sqlx",
  "system_properties",
+ "thiserror 2.0.17",
  "tokio",
  "tracing",
  "uuid",
