@@ -15,7 +15,6 @@ import { updateCookie } from '../util/updateCookie';
 import Banner from './banner/Banner';
 import { GlobalBulkEditEntityModal } from './bulk-edit-entity/BulkEditEntityModal';
 import { KommandMenu } from './command/Konsole';
-import { Dock } from './dock/Dock';
 import GlobalShortcuts from './GlobalHotkeys';
 import { ItemDndProvider } from './ItemDragAndDrop';
 import { createMenuOpen, Launcher, setCreateMenuOpen } from './Launcher';
@@ -146,7 +145,7 @@ export function Layout(props: RouteSectionProps) {
       <Show when={paywallOpen()}>
         <Paywall />
       </Show>
-      <div class="p-[var(--gutter-size)] grow-1">
+      <div class="p-[var(--gutter-size)] ios:p-0 grow-1">
         <Resize.Zone
           gutter={8}
           direction="horizontal"
@@ -166,7 +165,6 @@ export function Layout(props: RouteSectionProps) {
         <Show
           when={isAuthenticated() && !AUTH_URLS.includes(location.pathname)}
         >
-          <Dock />
           <Launcher open={createMenuOpen()} onOpenChange={setCreateMenuOpen} />
         </Show>
       </Suspense>

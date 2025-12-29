@@ -815,16 +815,16 @@ export function EntityWithEverything(
       }}
       classList={{
         'outline outline-accent/20 outline-offset-[-1px]':
-          !isTouchDevice && props.selected && !props.checked,
+          !isTouchDevice() && props.selected && !props.checked,
         '!bg-accent/5 outline outline-accent/20 outline-offset-[-1px]':
           props.checked,
         'bracket outline outline-accent/20 outline-offset-[-1px]':
-          !isTouchDevice && props.selected,
+          !isTouchDevice() && props.selected,
         'active:bracket active:outline active:outline-accent/20 active:outline-offset-[-1px]':
-          isTouchDevice && !props.checked,
+          isTouchDevice() && !props.checked,
       }}
       onMouseOver={(e) => {
-        if (isTouchDevice) return;
+        if (isTouchDevice()) return;
         if (!didCursorMove(e)) {
           return;
         }
