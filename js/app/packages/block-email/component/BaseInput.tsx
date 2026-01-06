@@ -188,6 +188,7 @@ export function BaseInput(props: {
       });
       pendingMentions = [];
       await deleteDraftAndReset();
+      refetchThreadMessages();
       props.sideEffectOnSend?.(message.db_id ?? null);
       if (shouldMarkDoneOnSuccess()) {
         props.onMarkDone?.();
@@ -198,6 +199,10 @@ export function BaseInput(props: {
       toast.failure('Failed to send email');
     },
   });
+
+  function refetchThreadMessages() {
+    ctx.query.refetch();
+  }
 
   // Attach side-effect handlers on mount; they replay against current state
   onMount(() => {
@@ -277,6 +282,7 @@ export function BaseInput(props: {
       const draftId = savedDraftId();
       if (draftId) {
         await deleteEmailDraft(draftId);
+        refetchThreadMessages();
       }
       setSavedDraftId(undefined);
       return;
@@ -328,6 +334,7 @@ export function BaseInput(props: {
     if (draftResponse) {
       setSavedDraftId(draftResponse);
     }
+    refetchThreadMessages();
   }
 
   function scheduleDraftSave() {
@@ -503,6 +510,7 @@ export function BaseInput(props: {
     const draftId = savedDraftId();
     if (draftId) {
       await deleteEmailDraft(draftId);
+      refetchThreadMessages();
     }
     const replyingToId = props.replyingTo()?.db_id;
     if (replyingToId) {
