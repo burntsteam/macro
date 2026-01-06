@@ -138,6 +138,7 @@ const itemTypeSet = new Set([
   'email',
   'chat',
   'project',
+  'thread',
 ]);
 
 export function isItemType(str: string): str is ItemType {
@@ -201,6 +202,10 @@ export function blockNameToItemType(
 
 export function stringToItemType(str: string): ItemType | undefined {
   switch (str) {
+    case 'email':
+    case 'thread': {
+      return 'email';
+    }
     case 'chat':
     case 'document':
     case 'project':
@@ -1289,6 +1294,18 @@ export const storageServiceClient = {
         body: JSON.stringify(params),
       });
     },
+  },
+  async editThread(params) {
+    const { threadId, ...body } = params;
+
+    return mapOk(
+      await dssFetch<SuccessResponse>(`/threads/${threadId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+
+      (result) => result.data
+    );
   },
 } satisfies StorageServiceClient & typeof enhancements;
 

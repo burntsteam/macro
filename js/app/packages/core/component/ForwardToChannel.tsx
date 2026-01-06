@@ -125,9 +125,15 @@ export function ForwardToChannel(props: ForwardToChannelProps) {
     return true;
   });
 
-  const asAttachment = {
-    entity_type: blockNameToItemType(useBlockAliasedName()) ?? 'unknown',
-    entity_id: useBlockId(),
+  const blockName = useBlockAliasedName();
+  const blockId = useBlockId();
+  const asAttachment = () => {
+    const itemType =
+      blockName === 'email' ? 'thread' : blockNameToItemType(blockName);
+    return {
+      entity_type: itemType ?? 'unknown',
+      entity_id: blockId,
+    };
   };
 
   function handleSubmit() {
@@ -140,7 +146,7 @@ export function ForwardToChannel(props: ForwardToChannelProps) {
       const destination_ = destination();
       if (destination_ && destination_.type === 'users') {
         sendToUsers({
-          attachments: [asAttachment],
+          attachments: [asAttachment()],
           users: destination_.users,
           content: markdownState(),
           mentions: [],
@@ -169,7 +175,7 @@ export function ForwardToChannel(props: ForwardToChannelProps) {
           Promise.all([
             submitChannelPermissions(option.id),
             sendToChannel({
-              attachments: [asAttachment],
+              attachments: [asAttachment()],
               content: markdownState(),
               channelId: option.id,
               mentions: [],
@@ -192,7 +198,7 @@ export function ForwardToChannel(props: ForwardToChannelProps) {
         } else {
           // handles option.kind of user, custom, and contact (gmail)
           sendToUsers({
-            attachments: [asAttachment],
+            attachments: [asAttachment()],
             content: markdownState(),
             users: [option.id],
             mentions: [],

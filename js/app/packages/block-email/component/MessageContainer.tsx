@@ -205,6 +205,11 @@ export function MessageContainer(props: MessageContainerProps) {
               setFocusedMessageId={context.messages.setFocused}
               setShowReply={setShowReply}
               isLastMessage={props.isLastMessage}
+              hiddenActions={
+                !context.permissions().isOwner
+                  ? ['reply', 'reply-all', 'forward']
+                  : undefined
+              }
             />
           </Message.TopBar>
           <Message.Body>
@@ -286,13 +291,15 @@ export function MessageContainer(props: MessageContainerProps) {
             <Message.TopBar name={currentUserName()} />
             <div class="h-4" />
           </Message>
-          <Portal mount={threadAppendMountTarget()}>
-            <EmailInput
-              replyingTo={() => props.message}
-              setShowReply={setShowReply}
-              draft={draftChild()}
-            />
-          </Portal>
+          <Show when={context.permissions().isOwner}>
+            <Portal mount={threadAppendMountTarget()}>
+              <EmailInput
+                replyingTo={() => props.message}
+                setShowReply={setShowReply}
+                draft={draftChild()}
+              />
+            </Portal>
+          </Show>
         </Show>
       </div>
     </div>
