@@ -5,21 +5,12 @@ import {
   DATADOG_API_KEY,
   datadogAgentContainer,
   fargateLogRouterSidecarContainer,
-  serviceLoadBalancer,
 } from '../../packages/resources';
 import { EcrImage } from '../../packages/service';
-import {
-  BASE_DOMAIN,
-  CLOUD_TRAIL_SNS_TOPIC_ARN,
-  stack,
-} from '../../packages/shared';
+import { CLOUD_TRAIL_SNS_TOPIC_ARN, stack } from '../../packages/shared';
 
-const BASE_NAME = 'email-service';
+const BASE_NAME = 'email-service-pubsub-workers';
 const BASE_PATH = '../../../rust/cloud-storage';
-
-export const SERVICE_DOMAIN_NAME = `email-service${
-  stack === 'prod' ? '' : `-${stack}`
-}.${BASE_DOMAIN}`;
 
 type Args = {
   role: aws.iam.Role;
@@ -31,23 +22,15 @@ type Args = {
     privateSubnetIds: pulumi.Output<string[]> | string[];
   };
   platform: { family: string; architecture: 'amd64' | 'arm64' };
-  serviceContainerPort: number;
-  isPrivate?: boolean;
   containerEnvVars: { name: string; value: pulumi.Output<string> | string }[];
-  healthCheckPath: string;
   tags: { [key: string]: string };
 };
 
-export class EmailService extends pulumi.ComponentResource {
+export class EmailPubSubWorkers extends pulumi.ComponentResource {
   public role: aws.iam.Role;
   public ecr: awsx.ecr.Repository;
-  public serviceAlbSg: aws.ec2.SecurityGroup;
   public serviceSg: aws.ec2.SecurityGroup;
-  public targetGroup: aws.lb.TargetGroup;
-  public lb: aws.lb.LoadBalancer;
-  public listener: aws.lb.Listener;
   public service: awsx.ecs.FargateService;
-  public domain: string;
   public clusterName: pulumi.Output<string> | string;
   public tags: { [key: string]: string };
 
@@ -58,16 +41,13 @@ export class EmailService extends pulumi.ComponentResource {
       ecsClusterArn,
       vpc,
       platform,
-      serviceContainerPort,
-      healthCheckPath,
-      isPrivate,
       containerEnvVars,
       clusterName,
       tags,
     }: Args,
     opts?: pulumi.ComponentResourceOptions
   ) {
-    super('my:components:Service', name, {}, opts);
+    super('my:components:PubSubWorkers', name, {}, opts);
     this.tags = tags;
 
     this.clusterName = clusterName;
@@ -85,34 +65,17 @@ export class EmailService extends pulumi.ComponentResource {
         platform,
         tags: this.tags,
         buildArgs: {
-          SERVICE_NAME: 'email_service',
+          SERVICE_NAME: 'pubsub_workers',
         },
       },
       { parent: this }
     );
     this.ecr = image.ecr;
 
-    // sg
-    const sg = this.initializeSecurityGroups({
+    // sg - workers only need egress
+    this.serviceSg = this.initializeSecurityGroup({
       vpcId: vpc.vpcId,
-      serviceContainerPort,
     });
-    this.serviceAlbSg = sg.serviceAlbSg;
-    this.serviceSg = sg.serviceSg;
-
-    // lb
-    const { targetGroup, lb, listener } = serviceLoadBalancer(this, {
-      serviceName: BASE_NAME, // service name
-      serviceContainerPort,
-      healthCheckPath,
-      vpc,
-      albSecurityGroupId: this.serviceAlbSg.id,
-      isPrivate,
-      tags,
-    });
-    this.targetGroup = targetGroup;
-    this.lb = lb;
-    this.listener = listener;
 
     // service
     const service = new awsx.ecs.FargateService(
@@ -135,8 +98,8 @@ export class EmailService extends pulumi.ComponentResource {
               name: BASE_NAME,
               image: image.image.imageUri,
               stopTimeout: 10, // 10 seconds to force kill the task
-              cpu: stack === 'prod' ? 1024 : 256,
-              memory: stack === 'prod' ? 1742 : 717, // 2048 minimum - 256 for datadog - 50 for log_router
+              cpu: stack === 'prod' ? 2048 : 1024,
+              memory: stack === 'prod' ? 3742 : 1742, // 2048 minimum - 256 for datadog - 50 for log_router
               environment: [...containerEnvVars],
               logConfiguration: {
                 logDriver: 'awsfirelens',
@@ -144,21 +107,13 @@ export class EmailService extends pulumi.ComponentResource {
                   Name: 'datadog',
                   Host: 'http-intake.logs.us5.datadoghq.com',
                   apikey: DATADOG_API_KEY,
-                  dd_service: `email-service-${stack}`,
+                  dd_service: `${BASE_NAME}-${stack}`,
                   dd_source: 'fargate',
                   dd_tags: `project:cloudstorage, env:${stack}`,
                   provider: 'ecs',
                 },
               },
-              portMappings: [
-                {
-                  appProtocol: 'http',
-                  name: `${BASE_NAME}-tcp-${stack}`,
-                  hostPort: serviceContainerPort,
-                  containerPort: serviceContainerPort,
-                  targetGroup,
-                },
-              ],
+              // No portMappings - workers don't expose ports
             },
           },
           runtimePlatform: {
@@ -180,68 +135,19 @@ export class EmailService extends pulumi.ComponentResource {
     this.setupAutoScaling();
 
     this.setupServiceAlarms();
-
-    // domain record
-    const zone = aws.route53.getZoneOutput({ name: BASE_DOMAIN });
-
-    new aws.route53.Record(
-      `${BASE_NAME}-domain-record`,
-      {
-        name: SERVICE_DOMAIN_NAME,
-        type: 'A',
-        zoneId: zone.zoneId,
-        aliases: [
-          {
-            evaluateTargetHealth: false,
-            name: this.lb.dnsName,
-            zoneId: this.lb.zoneId,
-          },
-        ],
-      },
-      { parent: this }
-    );
-
-    this.domain = `https://${SERVICE_DOMAIN_NAME}`;
   }
 
-  initializeSecurityGroups({
+  initializeSecurityGroup({
     vpcId,
-    serviceContainerPort,
   }: {
     vpcId: pulumi.Output<string> | string;
-    serviceContainerPort: number;
   }) {
-    const serviceAlbSg = new aws.ec2.SecurityGroup(
-      `${BASE_NAME}-alb-sg-${stack}`,
-      {
-        name: `${BASE_NAME}-alb-sg-${stack}`,
-        description: `${BASE_NAME} application load balancer security group`,
-        vpcId,
-        tags: this.tags,
-      },
-      { parent: this }
-    );
-
     const serviceSg = new aws.ec2.SecurityGroup(
       `${BASE_NAME}-sg-${stack}`,
       {
         name: `${BASE_NAME}-sg-${stack}`,
         vpcId,
         description: `${BASE_NAME} security group that is attached directly to the service`,
-        tags: this.tags,
-      },
-      { parent: this }
-    );
-
-    new aws.vpc.SecurityGroupIngressRule(
-      `${BASE_NAME}-alb-in`,
-      {
-        securityGroupId: serviceSg.id,
-        description: 'Allow inbound traffic from the services ALB',
-        referencedSecurityGroupId: serviceAlbSg.id,
-        fromPort: serviceContainerPort,
-        toPort: serviceContainerPort,
-        ipProtocol: 'tcp',
         tags: this.tags,
       },
       { parent: this }
@@ -259,57 +165,14 @@ export class EmailService extends pulumi.ComponentResource {
       { parent: this }
     );
 
-    // ALB SG rules
-    new aws.vpc.SecurityGroupIngressRule(
-      `${BASE_NAME}-http`,
-      {
-        securityGroupId: serviceAlbSg.id,
-        description: 'Allow inbound HTTP traffic',
-        cidrIpv4: '0.0.0.0/0',
-        fromPort: 80,
-        ipProtocol: 'tcp',
-        toPort: 80,
-        tags: this.tags,
-      },
-      { parent: this }
-    );
-
-    new aws.vpc.SecurityGroupIngressRule(
-      `${BASE_NAME}-https`,
-      {
-        securityGroupId: serviceAlbSg.id,
-        description: 'Allow inbound HTTPS traffic',
-        cidrIpv4: '0.0.0.0/0',
-        fromPort: 443,
-        ipProtocol: 'tcp',
-        toPort: 443,
-        tags: this.tags,
-      },
-      { parent: this }
-    );
-
-    new aws.vpc.SecurityGroupEgressRule(
-      `${BASE_NAME}-out-service`,
-      {
-        description: 'Allow traffic to the service security group',
-        securityGroupId: serviceAlbSg.id,
-        referencedSecurityGroupId: serviceSg.id,
-        fromPort: serviceContainerPort,
-        ipProtocol: 'tcp',
-        toPort: serviceContainerPort,
-        tags: this.tags,
-      },
-      { parent: this }
-    );
-
-    return { serviceAlbSg, serviceSg };
+    return serviceSg;
   }
 
   setupAutoScaling() {
     if (!this.service) return;
 
     const serviceScalableTarget = new aws.appautoscaling.Target(
-      `${BASE_NAME}-service-scalable-target-${stack}`,
+      `${BASE_NAME}-scalable-target-${stack}`,
       {
         maxCapacity: stack === 'prod' ? 10 : 2,
         minCapacity: stack === 'prod' ? 5 : 1,
@@ -317,41 +180,6 @@ export class EmailService extends pulumi.ComponentResource {
         scalableDimension: 'ecs:service:DesiredCount',
         serviceNamespace: 'ecs',
         tags: this.tags,
-      },
-      { parent: this }
-    );
-
-    const lbPortion: pulumi.Output<string> = this.lb.arn.apply((arn) => {
-      const parts = arn.split(':loadbalancer/');
-      return parts[1];
-    });
-
-    const tgPortion: pulumi.Output<string> = this.targetGroup.arn.apply(
-      (arn) => {
-        const parts = arn.split(':');
-        return parts[parts.length - 1];
-      }
-    );
-
-    const resourceLabel = pulumi.interpolate`${lbPortion}/${tgPortion}`;
-
-    // Create an Auto Scaling policy for request count.
-    new aws.appautoscaling.Policy(
-      `${BASE_NAME}-scaling-policy-request-count-${stack}`,
-      {
-        policyType: 'TargetTrackingScaling',
-        resourceId: serviceScalableTarget.resourceId,
-        scalableDimension: serviceScalableTarget.scalableDimension,
-        serviceNamespace: serviceScalableTarget.serviceNamespace,
-        targetTrackingScalingPolicyConfiguration: {
-          targetValue: 1000, // TODO: play with this
-          predefinedMetricSpecification: {
-            predefinedMetricType: 'ALBRequestCountPerTarget',
-            resourceLabel,
-          },
-          scaleInCooldown: 60,
-          scaleOutCooldown: 120,
-        },
       },
       { parent: this }
     );
@@ -436,28 +264,6 @@ export class EmailService extends pulumi.ComponentResource {
           ServiceName: this.service.service.name,
         },
         alarmDescription: `High Memory usage alarm for ${BASE_NAME} service.`,
-        actionsEnabled: true,
-        alarmActions: [CLOUD_TRAIL_SNS_TOPIC_ARN],
-        tags: this.tags,
-      },
-      { parent: this }
-    );
-
-    new aws.cloudwatch.MetricAlarm(
-      `${BASE_NAME}-http-5xx-alarm`,
-      {
-        name: `${BASE_NAME}-http-5xx-${stack}`,
-        metricName: 'HTTPCode_ELB_5XX_Count',
-        namespace: 'AWS/ApplicationELB',
-        statistic: 'Sum',
-        period: 180,
-        evaluationPeriods: 1,
-        threshold: 25,
-        comparisonOperator: 'GreaterThanOrEqualToThreshold',
-        dimensions: {
-          LoadBalancer: this.lb.arn,
-        },
-        alarmDescription: `High HTTP 5XX count alarm for ${BASE_NAME} Load Balancer.`,
         actionsEnabled: true,
         alarmActions: [CLOUD_TRAIL_SNS_TOPIC_ARN],
         tags: this.tags,
