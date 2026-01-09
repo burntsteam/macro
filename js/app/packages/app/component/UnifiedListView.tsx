@@ -3,12 +3,8 @@ import {
   useGlobalNotificationSource,
 } from '@app/component/GlobalAppState';
 import { noiseFilter, signalFilter } from '@app/component/soupFilters';
-import type { BlockChannelProps } from '@block-channel/component/Block';
 import { URL_PARAMS as CHANNEL_PARAMS } from '@block-channel/constants';
 import { codeFileExtensions } from '@block-code/util/languageSupport';
-import { URL_PARAMS as EMAIL_PARAMS } from '@block-email/constants';
-import { URL_PARAMS as MD_PARAMS } from '@block-md/constants';
-import { URL_PARAMS as PDF_PARAMS } from '@block-pdf/signal/location';
 import { DeprecatedIconButton } from '@core/component/DeprecatedIconButton';
 import { DeprecatedButton } from '@core/component/FormControls/DeprecatedButton';
 import DropdownMenu from '@core/component/FormControls/DropdownMenu';
@@ -19,10 +15,7 @@ import { ContextMenuContent, MenuSeparator } from '@core/component/Menu';
 import { useTaskProperties } from '@core/component/Properties/hooks';
 import { getSuggestedProperties } from '@core/component/Properties/utils';
 import { RecipientSelector } from '@core/component/RecipientSelector';
-import {
-  blockAcceptsFileExtension,
-  fileTypeToBlockName,
-} from '@core/constant/allBlocks';
+import { blockAcceptsFileExtension } from '@core/constant/allBlocks';
 import {
   ENABLE_FRECENCY,
   ENABLE_PROPERTY_DISPLAY,
@@ -51,7 +44,6 @@ import {
   createSort,
   createUnifiedInfiniteList,
   createUnifiedSearchInfiniteQuery,
-  type DocumentEntity,
   Entity,
   type EntityClickHandler,
   type EntityData,
@@ -138,11 +130,11 @@ import { EntitySelectionToolbarModal } from './EntitySelectionToolbarModal';
 import { EntityRow, EntityRowProvider } from './mobile/EntityRow';
 import { PropertyDisplayControl } from './PropertyDisplayControl';
 import { useUpsertSavedViewMutation } from './Soup';
+import { openEntityInSplitFromUnifiedList } from './soupContextHelpers';
 import {
   SplitToolbarLeft,
   SplitToolbarRight,
 } from './split-layout/components/SplitToolbar';
-import { useSplitLayout } from './split-layout/layout';
 import { useSplitPanelOrThrow } from './split-layout/layoutUtils';
 import {
   type DisplayOptions,
@@ -240,7 +232,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
   );
 
   const splitContext = useSplitPanelOrThrow();
-  const { isPanelActive, unifiedListContext, previewState } = splitContext;
+  const { isPanelActive, soupContext, previewState } = splitContext;
   const [preview] = previewState;
   const {
     viewsDataStore: viewsData,
@@ -250,7 +242,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
     entityListRefSignal: [, setEntityListRef],
     entitiesSignal: [entities_, setEntities],
     emailViewSignal: [emailView],
-  } = unifiedListContext;
+  } = soupContext;
 
   // Properties for task entities
   const taskPropertiesStore = useTaskProperties(entities_);
@@ -963,15 +955,13 @@ export function UnifiedListView(props: UnifiedListViewProps) {
 
   const notificationSource = useGlobalNotificationSource();
   const markEntityAsDone = (entity: EntityData) => {
-    const actions = unifiedListContext.actionRegistry;
+    const actions = soupContext.actionRegistry;
     if (actions.isActionEnabled('mark_as_done', entity)) {
       actions.execute('mark_as_done', entity);
       return true;
     }
     return false;
   };
-
-  const { replaceOrInsertSplit, insertSplit } = useSplitLayout();
 
   const blockOrchestrator = useGlobalBlockOrchestrator();
   const gotoChannelNotification = async (notification: UnifiedNotification) => {
@@ -1107,39 +1097,6 @@ export function UnifiedListView(props: UnifiedListViewProps) {
     });
   });
 
-  const documentEntityClickHandler: EntityClickHandler<
-    DocumentEntity | WithSearch<DocumentEntity>
-  > = async (entity, event, location) => {
-    const { id, fileType, subType } = entity;
-    const blockName = fileTypeToBlockName(subType ?? fileType);
-    const handle = event.altKey
-      ? insertSplit({ type: blockName, id })
-      : replaceOrInsertSplit({ type: blockName, id });
-
-    handle?.activate();
-
-    if (!location) return;
-
-    const blockHandle = await blockOrchestrator.getBlockHandle(id);
-    switch (location.type) {
-      case 'md':
-        await blockHandle?.goToLocationFromParams({
-          [MD_PARAMS.nodeId]: location.nodeId,
-        });
-        break;
-      case 'pdf':
-        await blockHandle?.goToLocationFromParams({
-          [PDF_PARAMS.searchPage]: location.searchPage.toString(),
-          [PDF_PARAMS.searchRawQuery]: location.searchRawQuery,
-          [PDF_PARAMS.searchHighlightTerms]: JSON.stringify(
-            location.highlightTerms
-          ),
-          [PDF_PARAMS.searchSnippet]: location.searchSnippet,
-        });
-        break;
-    }
-  };
-
   const entityClickHandler: EntityClickHandler<EntityData> = async (
     entity,
     event,
@@ -1152,45 +1109,11 @@ export function UnifiedListView(props: UnifiedListViewProps) {
       return;
     }
 
-    if (entity.type === 'document')
-      return documentEntityClickHandler(entity, event, location);
-
-    const params =
-      entity.type === 'channel' && location?.type === 'channel'
-        ? ({
-            target: {
-              threadId: location.threadId,
-              messageId: location.messageId,
-            },
-          } as BlockChannelProps)
-        : undefined;
-
-    const handle = event.altKey
-      ? insertSplit({ type: entity.type, id: entity.id, params })
-      : replaceOrInsertSplit({ type: entity.type, id: entity.id, params });
-
-    handle?.activate();
-
-    if (!location) return;
-
-    switch (location.type) {
-      case 'channel': {
-        // NOTE: this is handled by the channel block params but this can be used to re-flash an open channel
-        const blockHandle = await blockOrchestrator.getBlockHandle(entity.id);
-        await blockHandle?.goToLocationFromParams({
-          [CHANNEL_PARAMS.thread]: location.threadId,
-          [CHANNEL_PARAMS.message]: location.messageId,
-        });
-        break;
-      }
-      case 'email': {
-        const blockHandle = await blockOrchestrator.getBlockHandle(entity.id);
-        await blockHandle?.goToLocationFromParams({
-          [EMAIL_PARAMS.messageId]: location.messageId,
-        });
-        break;
-      }
-    }
+    await openEntityInSplitFromUnifiedList(entity, {
+      openInNewSplit: event.altKey,
+      location,
+      splitHandle: splitContext.handle,
+    });
   };
 
   const StyledTriggerLabel = (props: ParentProps) => {
@@ -1283,7 +1206,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
     entity: EntityData;
     next: boolean;
   }) => {
-    unifiedListContext.setViewDataStore(
+    soupContext.setViewDataStore(
       selectedView(),
       'multiSelectEntities',
       (prev) => {
@@ -1350,12 +1273,11 @@ export function UnifiedListView(props: UnifiedListViewProps) {
       return;
     }
 
-    const entityList = unifiedListContext.entitiesSignal[0]();
+    const entityList = soupContext.entitiesSignal[0]();
     if (!entityList) return;
 
     const selectedEntitySet = new Set(
-      unifiedListContext.viewsDataStore[unifiedListContext.selectedView()]
-        .multiSelectEntities
+      soupContext.viewsDataStore[soupContext.selectedView()].multiSelectEntities
     );
 
     const anchorIndex = getSelectionAnchorIndex({
@@ -1377,7 +1299,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
       targetIndex: params.entityIndex,
     });
 
-    unifiedListContext.setViewDataStore(
+    soupContext.setViewDataStore(
       selectedView(),
       'multiSelectEntities',
       (prev) => prev.concat(newEntitiesForSelection)
@@ -1396,8 +1318,8 @@ export function UnifiedListView(props: UnifiedListViewProps) {
   // reset last clicked on reset multi-selection.
   createEffect(() => {
     if (
-      unifiedListContext.viewsDataStore[selectedView()].multiSelectEntities
-        .length === 0
+      soupContext.viewsDataStore[selectedView()].multiSelectEntities.length ===
+      0
     ) {
       lastClickedEntityId = -1;
     }
@@ -1655,7 +1577,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
             canSwipeLeft={(entityId) => {
               const entity = entityById().get(entityId);
               if (!entity) return false;
-              return unifiedListContext.actionRegistry.isActionEnabled(
+              return soupContext.actionRegistry.isActionEnabled(
                 'mark_as_done',
                 entity
               );
@@ -1664,9 +1586,9 @@ export function UnifiedListView(props: UnifiedListViewProps) {
               const entity = entityById().get(entityId);
               if (!entity) return false;
 
-              unifiedListContext.actionRegistry.execute('mark_as_done', entity);
+              soupContext.actionRegistry.execute('mark_as_done', entity);
             }}
-            setCollapseEntity={unifiedListContext.collapseEntitySignal[1]}
+            setCollapseEntity={soupContext.collapseEntitySignal[1]}
           >
             <UnifiedListComponent
               entityListRef={setLocalEntityListRef}
@@ -1728,7 +1650,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
                       timestamp={timestamp()}
                       onClick={entityClickHandler}
                       onClickRowAction={
-                        unifiedListContext.actionRegistry.isActionEnabled(
+                        soupContext.actionRegistry.isActionEnabled(
                           'mark_as_done',
                           innerProps.entity
                         )
@@ -1841,7 +1763,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
           <EntitySelectionToolbarModal
             multiSelectEntities={view()?.multiSelectEntities ?? []}
             onClose={() =>
-              unifiedListContext.setViewDataStore(
+              soupContext.setViewDataStore(
                 selectedView(),
                 'multiSelectEntities',
                 []
@@ -1865,7 +1787,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
                 setKonsoleContextInformation({
                   selectedEntities: multiSelectEntities.slice(),
                   clearSelection: () => {
-                    unifiedListContext.setViewDataStore(
+                    soupContext.setViewDataStore(
                       selectedView(),
                       'multiSelectEntities',
                       []
@@ -1931,7 +1853,7 @@ function SearchBar(props: {
     virtualizerHandleSignal: [virtualizerHandle],
     entityListRefSignal: [entityListRef],
     navigateThroughList,
-  } = splitContext.unifiedListContext;
+  } = splitContext.soupContext;
   const viewData = createMemo(() => viewsDataStore[selectedView()]);
   const viewName = createMemo(() => viewData().view);
 
