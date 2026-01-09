@@ -15,7 +15,10 @@ import { ContextMenuContent, MenuSeparator } from '@core/component/Menu';
 import { useTaskProperties } from '@core/component/Properties/hooks';
 import { getSuggestedProperties } from '@core/component/Properties/utils';
 import { RecipientSelector } from '@core/component/RecipientSelector';
-import { blockAcceptsFileExtension } from '@core/constant/allBlocks';
+import {
+  blockAcceptsFileExtension,
+  fileTypeToBlockName,
+} from '@core/constant/allBlocks';
 import {
   ENABLE_FRECENCY,
   ENABLE_PROPERTY_DISPLAY,
@@ -52,6 +55,7 @@ import {
   importantFilterFn,
   isTaskEntity,
   notDoneFilterFn,
+  type SearchLocation,
   type SortOption,
   sortByCreatedAt,
   sortByFrecencyScore,
@@ -109,6 +113,7 @@ import {
   type SetStoreFunction,
   unwrap,
 } from 'solid-js/store';
+import type { EntityPointerDownHandler } from '../../macro-entity/src/components/Entity';
 import {
   ENTITY_HEIGHT,
   EntityWithEverything,
@@ -1097,6 +1102,81 @@ export function UnifiedListView(props: UnifiedListViewProps) {
     });
   });
 
+  const openEntityInNewTab = ({
+    entity,
+    location,
+  }: {
+    entity: EntityData;
+    location?: SearchLocation;
+  }) => {
+    // Build URL for the entity
+    let entityPath: string;
+    if (entity.type === 'document') {
+      const { fileType, subType } = entity;
+      const blockName = fileTypeToBlockName(subType ?? fileType);
+      entityPath = `/app/${blockName}/${entity.id}`;
+    } else {
+      entityPath = `/app/${entity.type}/${entity.id}`;
+    }
+
+    // Add location params if present
+    const entityUrl = new URL(entityPath, window.location.origin);
+    if (location) {
+      switch (location.type) {
+        case 'channel':
+          if (location.messageId) {
+            entityUrl.searchParams.set(
+              'channel_message_id',
+              location.messageId
+            );
+          }
+          if (location.threadId) {
+            entityUrl.searchParams.set('thread', location.threadId);
+          }
+          break;
+        case 'email':
+          if (location.messageId) {
+            entityUrl.searchParams.set('email_message_id', location.messageId);
+          }
+
+          break;
+        case 'md':
+          if (location.nodeId) {
+            entityUrl.searchParams.set('node_id', location.nodeId);
+          }
+          break;
+        case 'pdf':
+          if (location.searchPage !== undefined) {
+            entityUrl.searchParams.set(
+              'search_page',
+              location.searchPage.toString()
+            );
+          }
+          if (location.searchRawQuery) {
+            entityUrl.searchParams.set(
+              'search_raw_query',
+              location.searchRawQuery
+            );
+          }
+          if (location.highlightTerms) {
+            entityUrl.searchParams.set(
+              'search_highlight_terms',
+              JSON.stringify(location.highlightTerms)
+            );
+          }
+          if (location.searchSnippet) {
+            entityUrl.searchParams.set(
+              'search_snippet',
+              location.searchSnippet
+            );
+          }
+          break;
+      }
+    }
+
+    window.open(entityUrl.toString(), '_blank', 'noopener');
+  };
+
   const entityClickHandler: EntityClickHandler<EntityData> = async (
     entity,
     event,
@@ -1109,11 +1189,33 @@ export function UnifiedListView(props: UnifiedListViewProps) {
       return;
     }
 
+    if (event.metaKey || event.ctrlKey) {
+      openEntityInNewTab({ entity, location });
+      return;
+    }
+
     await openEntityInSplitFromUnifiedList(entity, {
       openInNewSplit: event.altKey,
       location,
       splitHandle: splitContext.handle,
     });
+  };
+
+  const entityPointerDownHandler: EntityPointerDownHandler<EntityData> = async (
+    entity,
+    event,
+    location,
+    options
+  ) => {
+    if (preview() && !options?.ignorePreview) {
+      return;
+    }
+
+    // middle mouse button pressed
+    if (event.button === 1 && event.pointerType === 'mouse') {
+      // TODO: current page should remain focused after opening new tab
+      openEntityInNewTab({ entity, location });
+    }
   };
 
   const StyledTriggerLabel = (props: ParentProps) => {
@@ -1649,6 +1751,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
                       properties={properties()}
                       timestamp={timestamp()}
                       onClick={entityClickHandler}
+                      onPointerDown={entityPointerDownHandler}
                       onClickRowAction={
                         soupContext.actionRegistry.isActionEnabled(
                           'mark_as_done',
