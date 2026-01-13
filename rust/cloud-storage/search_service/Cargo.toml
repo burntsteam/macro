@@ -13,6 +13,7 @@ chrono = { workspace = true }
 comms_service_client = { path = "../comms_service_client" }
 document_storage_service_client = { path = "../document_storage_service_client" }
 document_sub_type = { path = "../document_sub_type" }
+email_contact_search = { path = "../email_contact_search" }
 email_service_client = { path = "../email_service_client" }
 futures = { workspace = true }
 http-body-util = { workspace = true }
@@ -31,6 +32,7 @@ model = { path = "../model" }
 models_email = { path = "../models_email" }
 models_opensearch = { path = "../models_opensearch" }
 models_search = { path = "../models_search" }
+models_search_cursor = { path = "../models_search_cursor" }
 name_search = { path = "../name_search" }
 opensearch_client = { path = "../opensearch_client" }
 secretsmanager_client = { path = "../secretsmanager_client" }
