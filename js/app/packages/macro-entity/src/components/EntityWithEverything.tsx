@@ -655,10 +655,19 @@ export function EntityWithEverything(
               </div>
             </div>
             {/* Sender Name */}
-            <div class="truncate @max-md/uList:min-w-0">
-              {displayedNames() ??
-                props.entity.senderName ??
-                props.entity.senderEmail?.split('@')[0]}
+            <div class="truncate flex items-center gap-1 @max-md/uList:min-w-0">
+              <Show
+                when={props.entity.type === 'email' && props.entity.isDraft}
+              >
+                <div class="font-mono font-medium user-select-none uppercase flex items-center text-accent-30 p-0.5 gap-1 text-[0.625rem] rounded-full border border-edge-muted px-2">
+                  DRAFT
+                </div>
+              </Show>
+              <span>
+                {displayedNames() ??
+                  props.entity.senderName ??
+                  props.entity.senderEmail?.split('@')[0]}
+              </span>
             </div>
             {/* Sender Email Address */}
             {/* <Show
