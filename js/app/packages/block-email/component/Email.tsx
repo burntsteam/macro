@@ -415,6 +415,11 @@ function EmailContent(props: EmailViewProps) {
           />
           <CustomScrollbar reverse scrollContainer={context.messagesListRef} />
         </div>
+        <FloatingInputLoader
+          isLoading={context.query.isFetching}
+          loadingText="Loading messages"
+          class="top-2"
+        />
         <Show
           when={
             context.permissions().isOwner &&
@@ -426,10 +431,6 @@ function EmailContent(props: EmailViewProps) {
             return (
               <div class="shrink-0 w-full px-4 pb-2">
                 <div class="relative w-full flex flex-row justify-center bg-panel macro-message-width mx-auto">
-                  <FloatingInputLoader
-                    isLoading={context.query.isFetching}
-                    loadingText="Loading messages"
-                  />
                   <EmailInput
                     replyingTo={lastMessage}
                     draft={
