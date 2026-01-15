@@ -15,7 +15,7 @@ import { isErr } from '@core/util/maybeResult';
 import { getScrollParent } from '@core/util/scrollParent';
 import { scrollToKeepGap } from '@core/util/scrollToKeepGap';
 import { waitForFrames } from '@core/util/sleep';
-import { type EntityData, isTaskEntity } from '@macro-entity';
+import { type EntityData, isSearchEntity, isTaskEntity } from '@macro-entity';
 import { entityHasUnreadNotifications } from '@notifications';
 import type { PreviewViewStandardLabel } from '@service-email/generated/schemas';
 import type { PropertiesEntityType } from '@service-properties/client';
@@ -1382,8 +1382,16 @@ export function createNavigationEntityListShortcut({
       const entity = getSelectedEntity()?.entity;
       if (!entity) return false;
 
+      const contentHitData = isSearchEntity(entity)
+        ? entity.search.contentHitData
+        : undefined;
+      // Only navigate to specific location if there's exactly one hit
+      const location =
+        contentHitData?.length === 1 ? contentHitData[0]?.location : undefined;
+
       openEntityInSplitFromUnifiedList(entity, {
         splitHandle,
+        location,
       });
       return true;
     },
