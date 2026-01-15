@@ -1864,6 +1864,9 @@ export function UnifiedListView(props: UnifiedListViewProps) {
               searchText={searchText()}
               hasRefinementsFromBase={isViewConfigChanged()}
               entityMinHeight={ENTITY_HEIGHT}
+              viewType={view()?.viewType}
+              name={view()?.view}
+              splitId={splitContext.handle.id}
             >
               {(innerProps) => {
                 const displayDoneButton = () => {
@@ -1914,6 +1917,7 @@ export function UnifiedListView(props: UnifiedListViewProps) {
                       }}
                       entity={innerProps.entity}
                       properties={properties()}
+                      splitId={splitContext.handle.id}
                       timestamp={timestamp()}
                       onClick={entityClickHandler}
                       onDblClick={entityDblClickHandler}
