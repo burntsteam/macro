@@ -580,7 +580,12 @@ export function ShareModal(props: ShareModalProps) {
                 </div>
               </Show>
 
-              <Show when={props.userPermissions === Permissions.OWNER}>
+              <Show
+                when={
+                  props.userPermissions === Permissions.OWNER &&
+                  props.itemType !== 'email'
+                }
+              >
                 <div class="border-t-1 border-edge-muted flex flex-col">
                   <div
                     class="border-b border-edge-muted/50 bg-panel w-full h-[40px] flex items-center"
