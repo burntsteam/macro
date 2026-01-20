@@ -8251,7 +8251,9 @@ dependencies = [
 name = "soup"
 version = "0.1.0"
 dependencies = [
+ "ai",
  "anyhow",
+ "async-trait",
  "axum",
  "axum-extra",
  "chrono",
@@ -8278,6 +8280,7 @@ dependencies = [
  "ordered-float",
  "recursion",
  "rootcause",
+ "schemars",
  "serde",
  "serde_json",
  "sqlx",
