@@ -539,7 +539,6 @@ pub async fn convert_db_messages_to_service_concurrent(
         scheduled_map,
         labels_map,
         attachments_map,
-        macro_attachments_map,
         draft_attachments_map,
     ) = tokio::try_join!(
         contacts::get::fetch_senders_by_message_ids(pool, &message_ids),
@@ -547,7 +546,6 @@ pub async fn convert_db_messages_to_service_concurrent(
         messages::scheduled::get::fetch_scheduled_messages_in_bulk(pool, &message_ids),
         labels::get::fetch_message_labels_in_bulk(pool, &message_ids),
         attachments::provider::fetch_db_attachments_in_bulk(pool, &message_ids_with_attachments),
-        attachments::marco::fetch_db_macro_attachments_in_bulk(pool, &message_ids),
         attachments::draft::fetch_db_draft_attachments_in_bulk(pool, &draft_message_ids),
     )?;
 
@@ -561,10 +559,6 @@ pub async fn convert_db_messages_to_service_concurrent(
         let scheduled = scheduled_map.get(&message_id).cloned();
         let labels = labels_map.get(&message_id).cloned().unwrap_or_default();
         let attachments = attachments_map
-            .get(&message_id)
-            .cloned()
-            .unwrap_or_default();
-        let macro_attachments = macro_attachments_map
             .get(&message_id)
             .cloned()
             .unwrap_or_default();
@@ -583,7 +577,6 @@ pub async fn convert_db_messages_to_service_concurrent(
             db_to_service::map_db_message_attachments_to_service(
                 service_message,
                 attachments,
-                macro_attachments,
                 draft_attachments,
             )
         }
