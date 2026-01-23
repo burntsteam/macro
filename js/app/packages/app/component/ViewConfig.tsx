@@ -13,6 +13,7 @@ import type { DeepPartial } from '@core/util/withRequired';
 import {
   type EntityData,
   type ExpandedEntityType,
+  isTaskEntity,
   queryKeys,
   type WithNotification,
 } from '@macro-entity';
@@ -211,6 +212,9 @@ const ALL_VIEWCONFIG_DEFAULTS = {
             isDone: entity.done,
             optimisticallyExclude: true,
           });
+        }
+        if (isTaskEntity(entity)) {
+          optimisticallyRemoveTaskFromSignal(entity.id);
         }
         if (extra?.notificationSource) {
           console.log('marking notification as done');
@@ -452,6 +456,45 @@ export async function archiveEmail(
       queryClient.invalidateQueries({ queryKey: queryKeys.all.dss }),
     ]);
   }
+}
+
+/**
+ * Optimistically removes a task from the DSS queries (signal view).
+ * This is used when marking a task as done in the signal view to immediately
+ * remove it from the list before the query refetches.
+ */
+export async function optimisticallyRemoveTaskFromSignal(id: string) {
+  await queryClient.cancelQueries({ queryKey: queryKeys.all.dss });
+
+  const previousDss = queryClient.getQueriesData<{
+    pages: { items: (EntityData | { data: EntityData })[] }[];
+  }>({
+    queryKey: queryKeys.all.dss,
+  });
+
+  // Filter out the task with the given ID
+  for (const [key, data] of previousDss) {
+    if (!data) continue;
+
+    const updatedData = {
+      ...data,
+      pages: data.pages.map((page) => ({
+        ...page,
+        items: page.items.filter((item) => {
+          if ('data' in item) {
+            return item.data.id !== id;
+          }
+          return item.id !== id;
+        }),
+      })),
+    };
+
+    queryClient.setQueryData(key, updatedData);
+  }
+
+  // Note: We don't rollback on error since the mutation happens separately
+  // via setPropertyStatusCompleteMutation. The query invalidation will
+  // sync the state after the mutation completes.
 }
 
 /**
