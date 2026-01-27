@@ -18,6 +18,7 @@ import {
   type DocumentCardNode,
   type DocumentMentionNode,
   type EquationNode,
+  type SnapshotNode,
   type GroupMentionNode,
   type HorizontalRuleNode,
   type ImageNode,
@@ -68,6 +69,7 @@ import { ContactMention as ContactMentionDecorator } from '../decorator/ContactM
 import { DateMention as DateMentionDecorator } from '../decorator/DateMention';
 import { DocumentCard as DocumentCardDecorator } from '../decorator/DocumentCard';
 import { DocumentMention as DocumentMentionDecorator } from '../decorator/DocumentMention';
+import { Snapshot as SnapshotDecorator } from '../decorator/Snapshot';
 import { GroupMention as GroupMentionDecorator } from '../decorator/GroupMention';
 import { Equation as EquationDecorator } from '../decorator/Equation';
 import { MarkdownImage as ImageDecorator } from '../decorator/MarkdownImage';
@@ -323,6 +325,20 @@ const GroupMention: RenderableEntity<GroupMentionNode> = {
   render: (props) => (
     <span>
       {GroupMentionDecorator({
+        ...props.node.exportComponentProps(),
+        key: props.node.getKey(),
+        theme: props.theme,
+      })}
+    </span>
+  ),
+};
+
+const Snapshot: RenderableEntity<SnapshotNode> = {
+  guard: (node: LexicalNode): node is SnapshotNode =>
+    node.__type === 'snapshot',
+  render: (props) => (
+    <span>
+      {SnapshotDecorator({
         ...props.node.exportComponentProps(),
         key: props.node.getKey(),
         theme: props.theme,
@@ -643,6 +659,7 @@ const InlineEntities: Array<RenderableEntity> = [
   ContactMention,
   DateMention,
   GroupMention,
+  Snapshot,
   Image,
   Video,
   HorizontalRule,
