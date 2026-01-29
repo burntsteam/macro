@@ -2500,8 +2500,9 @@ dependencies = [
  "macro_env",
  "macro_redis_cluster_client",
  "model",
+ "models_properties",
  "openssl",
- "properties_service_client",
+ "properties_db_client",
  "redis",
  "s3_client",
  "secretsmanager_client",
@@ -2796,6 +2797,7 @@ dependencies = [
  "models_soup",
  "ordered-float",
  "properties",
+ "properties_service",
  "rayon",
  "redis",
  "regex",
@@ -6705,7 +6707,6 @@ dependencies = [
  "aws-sdk-secretsmanager",
  "axum",
  "chrono",
- "comms_service_client",
  "email_db_client",
  "http-body-util",
  "macro_auth",
@@ -6736,18 +6737,6 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",
-]
-
-[[package]]
-name = "properties_service_client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "macro_service_client",
- "models_properties",
- "reqwest",
- "serde",
- "tracing",
 ]
 
 [[package]]
