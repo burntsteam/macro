@@ -25,6 +25,9 @@ import { CustomScrollbar } from '@core/component/CustomScrollbar';
 import { DeprecatedIconButton } from '@core/component/DeprecatedIconButton';
 import { DropdownMenuContent, MenuItem } from '@core/component/Menu';
 import { ReferencesModal } from '@core/component/ReferencesModal';
+import { ShareButton } from '@core/component/TopBar/ShareButton';
+import { getPermissions } from '@core/component/SharePermissions';
+import type { Permissions } from '@core/component/SharePermissions';
 import { Resize } from '@core/component/Resize';
 import { ENABLE_REFERENCES_MODAL } from '@core/constant/featureFlags';
 import { usePaywallState } from '@core/constant/PaywallState';
@@ -72,12 +75,14 @@ import { SplitlikeContainer } from '../split-layout/components/SplitContainer';
 import { Button } from '@ui/components/Button';
 import { Hotkey } from '@core/component/Hotkey';
 import { setPreviewData } from '@queries/preview';
+import { AccessLevel } from '@service-cognition/generated/schemas/accessLevel';
 
 type ChatData = {
   messages: ChatMessageWithAttachments[];
   name: string | undefined;
   model: Model | undefined;
   attachments: Attachment[];
+  userAccessLevel?: AccessLevel;
 };
 
 const getChatData = async (chatId: string): Promise<ChatData> => {
@@ -111,7 +116,13 @@ const getChatData = async (chatId: string): Promise<ChatData> => {
       .values()
       .toArray();
 
-  return { messages, name, model, attachments };
+  return {
+    messages,
+    name,
+    model,
+    attachments,
+    userAccessLevel: chat.userAccessLevel as AccessLevel,
+  };
 };
 
 const usePersistentChats = () => {
@@ -174,6 +185,7 @@ function TopBar(props: {
   chatId: string | undefined;
   setChatId: (chatId: string | undefined) => void;
   chatName?: string;
+  userPermissions: Accessor<Permissions>;
 }) {
   const createNewRightbarChat = () => {
     props.setChatId(undefined);
@@ -215,36 +227,47 @@ function TopBar(props: {
         <PlusIcon />
       </Button>
       <div class="grow" />
-      <Show when={ENABLE_REFERENCES_MODAL && props.chatId}>
-        <ReferencesModal
-          documentId={props.chatId!}
-          documentName={props.chatName ?? 'New Chat'}
+      <div class="flex items-center gap-1">
+        <Show when={ENABLE_REFERENCES_MODAL && props.chatId}>
+          <ReferencesModal
+            documentId={props.chatId!}
+            documentName={props.chatName ?? 'New Chat'}
+            entityType="chat"
+          />
+        </Show>
+        <Show when={props.chatId}>
+          <ShareButton
+            id={props.chatId!}
+            name={props.chatName ?? 'New Chat'}
+            userPermissions={props.userPermissions()}
+            itemType="chat"
+          />
+        </Show>
+        <DeprecatedIconButton
+          size="sm"
+          icon={NotepadIcon}
+          tooltip={{ label: 'Edit AI Instructions' }}
+          theme="current"
+          onClick={() => {
+            openInstructions();
+          }}
         />
-      </Show>
-      <DeprecatedIconButton
-        size="sm"
-        icon={NotepadIcon}
-        tooltip={{ label: 'Edit AI Instructions' }}
-        theme="current"
-        onClick={() => {
-          openInstructions();
-        }}
-      />
-      <PersistentChatHistoryButton setChatId={props.setChatId} />
-      <DeprecatedIconButton
-        size="sm"
-        icon={bigChatOpen() ? ContractIcon : ExpandIcon}
-        tooltip={{
-          label: bigChatOpen()
-            ? 'Minimize Assistant Panel'
-            : 'Spotlight Assistant Panel',
-          hotkeyToken: TOKENS.global.toggleBigChat,
-        }}
-        theme="current"
-        onClick={() => {
-          setBigChatOpen((v) => !v);
-        }}
-      />
+        <PersistentChatHistoryButton setChatId={props.setChatId} />
+        <DeprecatedIconButton
+          size="sm"
+          icon={bigChatOpen() ? ContractIcon : ExpandIcon}
+          tooltip={{
+            label: bigChatOpen()
+              ? 'Minimize Assistant Panel'
+              : 'Spotlight Assistant Panel',
+            hotkeyToken: TOKENS.global.toggleBigChat,
+          }}
+          theme="current"
+          onClick={() => {
+            setBigChatOpen((v) => !v);
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -262,6 +285,7 @@ export function Rightbar(props: {
     attachments: Attachment[];
     text: string | undefined;
   };
+  userPermissions: Accessor<Permissions>;
   setState: {
     setChatId: (chatId: string | undefined) => void;
     setModel: Setter<Model | undefined>;
@@ -400,6 +424,7 @@ export function Rightbar(props: {
           chatId={props.chatId}
           setChatId={props.setState.setChatId}
           chatName={props.chatName}
+          userPermissions={props.userPermissions}
         />
         <div class="flex flex-col flex-1 min-h-0 p-2 w-full items-center">
           <Show when={props.messages().length === 0}>
@@ -455,6 +480,9 @@ export const RightbarWrapper = (_props: { isBigChat?: boolean }) => {
   const [messages, setMessages] = createSignal<ChatMessageWithAttachments[]>(
     []
   );
+  const [userAccessLevel, setUserAccessLevel] = createSignal<
+    AccessLevel | undefined
+  >();
   const [model, setModel] = createSignal<Model | undefined>();
   const [attachments, setAttachments] = createSignal<Attachment[]>([]);
   const [stream, setStream] = createSignal<MessageStream>();
@@ -466,6 +494,7 @@ export const RightbarWrapper = (_props: { isBigChat?: boolean }) => {
       }
     | undefined
   >();
+  const userPermissions = createMemo(() => getPermissions(userAccessLevel()));
 
   const [attachHotkeys, scopeId] = useHotkeyDOMScope('ai-chat');
 
@@ -476,6 +505,7 @@ export const RightbarWrapper = (_props: { isBigChat?: boolean }) => {
     setAttachments(attached);
     setText(undefined);
     setMessages([]);
+    setUserAccessLevel(undefined);
     setInitialChatState({
       model: undefined,
       attachments: attached,
@@ -564,6 +594,7 @@ export const RightbarWrapper = (_props: { isBigChat?: boolean }) => {
       const newChatId = response.chat_id;
       setNewChatId(newChatId);
       setChatId(newChatId);
+      setUserAccessLevel(AccessLevel.owner);
 
       // TODO: move this into a separate resource so we don't have to refetch history
       // refetch history immediately to have the new chat id
@@ -647,11 +678,12 @@ export const RightbarWrapper = (_props: { isBigChat?: boolean }) => {
       // load existing server chat
       clearChatState();
       getChatData(chatId_)
-        .then(({ messages, name, model, attachments }) => {
+        .then(({ messages, name, model, attachments, userAccessLevel }) => {
           setChatName(name);
           setMessages(messages);
           setModel(model);
           setAttachments(attachments);
+          setUserAccessLevel(userAccessLevel);
           setInitialChatState({
             model,
             attachments,
@@ -747,6 +779,7 @@ export const RightbarWrapper = (_props: { isBigChat?: boolean }) => {
                 onSend={onSend}
                 stream={stream}
                 stopGenerating={stopGenerating}
+                userPermissions={userPermissions}
                 setState={{
                   setChatId,
                   setModel,
