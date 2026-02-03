@@ -52,7 +52,15 @@ export function ReplyInputsPortaler(props: ReplyInputsPortalerProps) {
 
   const onSend = (threadId: string) => async (args: SendMessageArgs) => {
     clearDraftMessage(props.channelId, threadId);
-    await sendMessage({ ...args, threadId });
+    listContext.closeThreadReply(threadId, true);
+
+    try {
+      await sendMessage({ ...args, threadId });
+    } catch {
+      listContext.createReply(threadId, true);
+      return;
+    }
+
     // After sending, focus the message immediately after the current one in the
     // flattened list.
     // Use a timeout to ensure the new message mounts in the DOM first.
@@ -76,10 +84,6 @@ export function ReplyInputsPortaler(props: ReplyInputsPortalerProps) {
         el?.focus();
       }, 0);
     }, 100);
-  };
-
-  const onAfterSend = (threadId: string) => () => {
-    listContext.closeThreadReply(threadId, true);
   };
 
   const closeDraft = (threadId: string) => () => {
@@ -134,7 +138,6 @@ export function ReplyInputsPortaler(props: ReplyInputsPortalerProps) {
             >
               <BaseInput
                 onSend={onSend(threadId)}
-                afterSend={onAfterSend(threadId)}
                 placeholder={`Send a reply`}
                 autoFocusOnMount={false}
                 shouldFocus={threadState()?.replyInputShouldFocus}

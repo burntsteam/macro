@@ -26,9 +26,8 @@ type ChannelQueryOptions = UseBaseQueryOptions<
   getChannelResponseError
 >;
 
-function channelQueryOptions(channelId: string): ChannelQueryOptions {
+export function channelQueryOptions(channelId: string): ChannelQueryOptions {
   return {
-    gcTime: 0,
     queryKey: channelKeys.withID(channelId).queryKey,
     queryFn: async () => {
       const result = await throwOnErr(
