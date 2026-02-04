@@ -5,7 +5,6 @@ import {
   ok,
   throwOnErr,
 } from '@core/util/maybeResult';
-import { queryKeys } from '@macro-entity';
 import { commsServiceClient } from '@service-comms/client';
 import type { getChannelResponseError } from '@service-comms/generated/client';
 import type {
@@ -176,18 +175,4 @@ export function softInvalidateChannelWithID(channelID: string) {
     queryKey: channelKeys.withID(channelID).queryKey,
     refetchType: 'inactive',
   });
-}
-
-export function optimisticUpdateChannelViewedAt(channelId: string) {
-  const now = new Date().toISOString();
-
-  queryClient.setQueryData<ApiChannelWithLatest[]>(
-    queryKeys.all.channel,
-    (old) => {
-      if (!old) return old;
-      return old.map((channel) =>
-        channel.id === channelId ? { ...channel, viewed_at: now } : channel
-      );
-    }
-  );
 }
