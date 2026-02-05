@@ -1,43 +1,15 @@
 import { itemToSafeName } from '@core/constant/allBlocks';
-import type { Item } from '@service-storage/generated/schemas/item';
+import type { HistoryItem, HistoryQueryResponse } from './types';
 
-type BaseHistoryItem = Pick<
-  Item,
-  'id' | 'name' | 'createdAt' | 'updatedAt' | 'deletedAt'
-> & {
-  viewedAt?: number;
-};
-
-export type DocumentHistoryItem = BaseHistoryItem &
-  Pick<Extract<Item, { type: 'document' }>, 'type' | 'fileType' | 'subType'>;
-
-export type ChatHistoryItem = BaseHistoryItem &
-  Pick<Extract<Item, { type: 'chat' }>, 'type' | 'isPersistent'>;
-
-export type ProjectHistoryItem = BaseHistoryItem &
-  Pick<Extract<Item, { type: 'project' }>, 'type'>;
-
-/** Minimal history item types containing only the properties actually used */
-export type HistoryItem =
-  | DocumentHistoryItem
-  | ChatHistoryItem
-  | ProjectHistoryItem;
-
-export type HistoryQueryResponse = {
-  data: HistoryItem[];
-};
-
-export function transformHistoryItem(
-  item: HistoryItem,
-  rawName?: boolean
-): HistoryItem {
+export function transformHistoryItem(item: HistoryItem): HistoryItem {
   const base = {
     id: item.id,
-    name: rawName ? item.name : itemToSafeName(item),
+    name: itemToSafeName(item),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     deletedAt: item.deletedAt,
     viewedAt: item.viewedAt,
+    rawName: item.name,
   };
 
   switch (item.type) {
@@ -64,22 +36,10 @@ export function transformHistoryItem(
   }
 }
 
-export function filterInstructionsMd(
-  items: HistoryItem[],
-  instructionsId: string | null | undefined
-): HistoryItem[] {
-  if (!instructionsId) return items;
-  return items.filter((item) => item.id !== instructionsId);
-}
-
 export function transformHistoryResponse(
-  data: HistoryQueryResponse,
-  instructionsId: string | null | undefined,
-  rawName?: boolean
+  response: HistoryQueryResponse
 ): HistoryItem[] {
-  return filterInstructionsMd(data.data, instructionsId).map((item) =>
-    transformHistoryItem(item, rawName)
-  );
+  return response.data.map(transformHistoryItem);
 }
 
 /**
