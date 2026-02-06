@@ -50,7 +50,6 @@ import { detect } from 'detect-browser';
 import {
   createEffect,
   type JSX,
-  lazy,
   Match,
   onCleanup,
   onMount,
@@ -257,10 +256,6 @@ const ROUTES: RouteDefinition[] = [
         <Onboarding />
       </div>
     ),
-  },
-  {
-    path: '/new/:block',
-    component: lazy(() => import('./NewRoute')),
   },
   {
     // This splat route must be last to catch all unmatched routes
