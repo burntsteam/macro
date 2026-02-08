@@ -9,13 +9,13 @@ import type { ItemType } from '@service-storage/client';
 import { ChannelTypeEnum } from '@service-comms/client';
 import type { EntityData } from '../types/entity';
 import { queryClient } from './client';
-import { queryKeys } from './key';
 import { type InfiniteData, useMutation } from '@tanstack/solid-query';
 import { toast } from '@core/component/Toast/Toast';
 import type { SoupPage } from '@service-storage/generated/schemas';
 import { setPreviewName } from '@queries/preview';
 import { setHistoryItemName } from '@queries/history/history';
 import { createCognitionWebsocketEffect } from '@service-cognition/websocket';
+import { soupKeys } from '@queries/soup/keys';
 
 type RenamableEntity = Pick<EntityData, 'id' | 'type' | 'name'> &
   Partial<EntityData>;
@@ -140,9 +140,9 @@ const renameDssSetData = (entities: EntityRenameOptimisticInfo[]) => {
   );
 
   queryClient.cancelQueries({
-    queryKey: queryKeys.all.dss,
+    queryKey: soupKeys.items._def,
   });
-  queryClient.setQueriesData({ queryKey: queryKeys.all.dss }, (prev) =>
+  queryClient.setQueriesData({ queryKey: soupKeys.items._def }, (prev) =>
     updateEntityNamesInDssQueryData(
       prev as InfiniteData<SoupPage, unknown> | undefined,
       updates
