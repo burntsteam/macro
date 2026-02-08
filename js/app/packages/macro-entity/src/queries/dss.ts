@@ -41,6 +41,7 @@ import {
 } from './auth';
 import { queryClient } from './client';
 import { type DssQueryKey, dssQueryKeyHashFn, queryKeys } from './key';
+import { soupKeys } from '@queries/soup/keys';
 
 const getSoupItemId = (item: SoupApiItem): string => {
   switch (item.tag) {
@@ -424,7 +425,7 @@ export function createDeleteDssItemMutation() {
       }
 
       queryClient.invalidateQueries({
-        queryKey: queryKeys.all.dss,
+        queryKey: soupKeys.items._def,
       });
     },
   }));
@@ -451,7 +452,7 @@ export function createBulkDeleteDssItemsMutation() {
       const deletedIDs = entities.map((e) => e.id);
 
       queryClient.cancelQueries({
-        queryKey: queryKeys.all.dss,
+        queryKey: soupKeys.items._def,
       });
       queryClient.cancelQueries({
         queryKey: queryKeys.all.search,
@@ -510,7 +511,7 @@ export function createBulkDeleteDssItemsMutation() {
         };
       }
 
-      queryClient.setQueriesData({ queryKey: queryKeys.all.dss }, (prev) =>
+      queryClient.setQueriesData({ queryKey: soupKeys.items._def }, (prev) =>
         removeEntitiesFromQueryData(
           prev as InfiniteData<SoupPage, unknown> | undefined
         )
@@ -529,7 +530,7 @@ export function createBulkDeleteDssItemsMutation() {
       toast.failure('Failed to delete items');
       // Rollback on error - restore the deleted items
       queryClient.invalidateQueries({
-        queryKey: queryKeys.all.dss,
+        queryKey: soupKeys.items._def,
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.all.search,
@@ -562,7 +563,7 @@ function invalidateAfterMove(hasProjects: boolean, failed?: boolean) {
   }
 
   queryClient.invalidateQueries({
-    queryKey: queryKeys.all.dss,
+    queryKey: soupKeys.items._def,
   });
   queryClient.invalidateQueries({ queryKey: ['entity'] });
   // If moving a project, invalidate all project queries since nested projects' breadcrumbs change too
@@ -605,7 +606,7 @@ export function createMoveToProjectDssEntityMutation() {
       // Projects have complex path data that we can't compute client-side
       if (type !== 'project') {
         queryClient.setQueriesData(
-          { queryKey: queryKeys.all.dss },
+          { queryKey: soupKeys.items._def },
           createMoveOptimisticUpdate([id], projectId)
         );
       }
@@ -653,7 +654,7 @@ export function createCopyDssEntityMutation() {
         toast.failure('Failed to copy item');
       }
       queryClient.invalidateQueries({
-        queryKey: queryKeys.all.dss,
+        queryKey: soupKeys.items._def,
       });
       queryClient.invalidateQueries({ queryKey: ['entity'] });
     },
@@ -711,7 +712,7 @@ export function createBulkCopyDssEntityMutation() {
 
       // Trigger refetch so new items appear
       queryClient.invalidateQueries({
-        queryKey: queryKeys.all.dss,
+        queryKey: soupKeys.items._def,
       });
       queryClient.invalidateQueries({ queryKey: ['entity'] });
     },

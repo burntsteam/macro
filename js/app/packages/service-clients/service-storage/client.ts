@@ -29,7 +29,13 @@ import { registerClient } from '@core/util/mockClient';
 import type { SafeFetchInit } from '@core/util/safeFetch';
 import type { IDocumentStorageServiceFile } from '@filesystem/file';
 import { platformFetch } from 'core/util/platformFetch';
-import type { AccessLevel, View, ViewsResponse } from './generated/schemas';
+import type {
+  AccessLevel,
+  PostSoupRequest,
+  SoupPage,
+  View,
+  ViewsResponse,
+} from './generated/schemas';
 import type { AddPinRequest } from './generated/schemas/addPinRequest';
 import type { AnchorResponse } from './generated/schemas/anchorResponse';
 import {
@@ -234,6 +240,21 @@ export const storageServiceClient = {
       await dssFetch<SuccessResponse>(`/ping`),
       (result) => result.data
     );
+  },
+
+  async getSoupItems(args: {
+    params: { cursor?: string | null };
+    body: PostSoupRequest;
+  }) {
+    // Could use URLSearchParams?
+    const searchParams = args.params.cursor
+      ? `?cursor=${args.params.cursor}`
+      : '';
+
+    return await dssFetch<SoupPage>(`/items/soup${searchParams}`, {
+      method: 'POST',
+      body: JSON.stringify(args.body),
+    });
   },
 
   permissionsTokens: {
