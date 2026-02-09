@@ -5,6 +5,7 @@ import {
   isProjectContainedEntity,
   type ProjectEntity,
   type EntityData,
+  isTaskEntity,
 } from '../types/entity';
 import { Match, Show, Switch, type Ref } from 'solid-js';
 import {
@@ -38,6 +39,7 @@ interface ListEntityProps {
   ref?: Ref<HTMLDivElement>;
   checked?: boolean;
   highlighted?: boolean;
+  hovered?: boolean;
   onChecked?: (checked: boolean, shiftKey: boolean) => void;
   onMouseOver?: () => void;
   onMouseLeave?: () => void;
@@ -46,7 +48,10 @@ interface ListEntityProps {
     entity: ProjectEntity,
     e: PointerEvent | MouseEvent
   ) => void;
-  onContentHitClick?: (location?: SearchLocation) => void;
+  onContentHitClick?: (
+    e: PointerEvent | MouseEvent,
+    location?: SearchLocation
+  ) => void;
 }
 
 interface LayoutProps {
@@ -113,6 +118,9 @@ function NarrowLayout(props: LayoutProps) {
             {(entity) => <Entity.Title entity={entity()} />}
           </Match>
         </Switch>
+        <Show when={isTaskEntity(props.entity) && props.entity}>
+          {(entity) => <Entity.Properties entity={entity()} />}
+        </Show>
       </Entity.Slot>
 
       <Entity.Slot
@@ -291,6 +299,9 @@ function WideLayout(props: LayoutProps) {
         <Show when={props.isShared}>
           <SharedBadge ownerId={props.entity.ownerId} />
         </Show>
+        <Show when={isTaskEntity(props.entity) && props.entity}>
+          {(entity) => <Entity.Properties entity={entity()} />}
+        </Show>
       </Entity.Slot>
 
       <Entity.Slot
@@ -347,6 +358,9 @@ export function ListEntity(props: ListEntityProps) {
       ref={mergeRefs(props.ref, draggable)}
       class={cn('@container/entity w-full min-h-10 relative group/narrow', {
         'bg-accent/5': props.checked,
+        'hover:bg-hover/30':
+          !props.checked && !props.highlighted && !props.hovered,
+        'bg-hover/20': props.hovered && !props.highlighted && !props.checked,
         'bg-accent/5 outline-1 outline-accent/20 outline-offset-[-1px]':
           props.highlighted,
       })}
