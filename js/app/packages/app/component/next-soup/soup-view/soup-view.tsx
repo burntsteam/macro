@@ -257,7 +257,6 @@ export const SoupViewList = (props: SoupViewListProps) => {
   useSoupViewHotkeys({
     splitId: panel.handle.id,
     scopeId: scopeId(),
-    domRef: soupViewRef,
     soup,
     splitHandle: panel.handle,
     virtualizerHandle,
@@ -321,7 +320,7 @@ export const SoupViewList = (props: SoupViewListProps) => {
     }
 
     await openEntityInSplitFromUnifiedList(entity, {
-      openInNewSplit: event.altKey,
+      openInNewSplit: event.shiftKey,
       location,
       splitHandle: panel.handle,
     });
@@ -335,7 +334,7 @@ export const SoupViewList = (props: SoupViewListProps) => {
     }
 
     await openEntityInSplitFromUnifiedList(entity, {
-      openInNewSplit: event.altKey,
+      openInNewSplit: event.shiftKey,
       location,
       splitHandle: panel.handle,
     });
