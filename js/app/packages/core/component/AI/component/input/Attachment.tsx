@@ -8,16 +8,23 @@ import { EntityIcon } from '@core/component/EntityIcon';
 import { ImagePreview } from '@core/component/ImagePreview';
 import { useItemPreviewData } from '@core/component/ItemPreview';
 import { toast } from '@core/component/Toast/Toast';
-import { fileTypeToBlockName } from '@core/constant/allBlocks';
+import { itemToBlockName } from '@core/constant/allBlocks';
 import { openInNewSplitForMention } from '@core/util/openInNewSplit';
 import { useSplitNavigationHandler } from '@core/util/useSplitNavigationHandler';
-import type { ItemEntity } from '@queries/preview';
 import XIcon from '@icon/regular/x.svg';
 import Spinner from '@phosphor-icons/core/bold/spinner-gap-bold.svg?component-solid';
 import Envelope from '@phosphor-icons/core/regular/envelope.svg';
 import Close from '@phosphor-icons/core/regular/x.svg?component-solid';
 import type { Accessor } from 'solid-js';
-import { createMemo, createSignal, For, Match, Show, Switch } from 'solid-js';
+import {
+  createMemo,
+  createSignal,
+  For,
+  Match,
+  Show,
+  Suspense,
+  Switch,
+} from 'solid-js';
 
 type AttachmentListProps = {
   removeAttachment: (id: string) => void;
@@ -30,10 +37,12 @@ export function AttachmentList(props: AttachmentListProps) {
     <div class="flex flex-row w-full space-x-2 items-end flex-wrap overflow-x-hidden pb-1">
       <For each={props.attached()}>
         {(attachment) => (
-          <ChatAttachment
-            attachment={attachment}
-            onRemove={() => props.removeAttachment(attachment.attachmentId)}
-          />
+          <Suspense>
+            <ChatAttachment
+              attachment={attachment}
+              onRemove={() => props.removeAttachment(attachment.attachmentId)}
+            />
+          </Suspense>
         )}
       </For>
       <For each={props.uploading()}>
@@ -101,60 +110,34 @@ function ChatAttachment(props: {
 }) {
   const { insertSplit, replaceOrInsertSplit } = useSplitLayout();
 
-  const itemEntity = createMemo((): ItemEntity | null => {
-    const attachment = props.attachment;
-    if (!attachment.metadata) return null;
-
-    if (
-      attachment.metadata.type === 'email' ||
-      attachment.metadata.type === 'image'
-    ) {
-      return null;
-    }
-
-    if (attachment.metadata.type === 'channel') {
-      return {
-        id: attachment.attachmentId,
-        type: 'channel',
-      };
-    }
-
-    return {
-      id: attachment.attachmentId,
-      type: attachment.metadata.type,
-    };
-  });
-
-  const previewData = createMemo(() => {
-    const entity = itemEntity();
-    if (!entity) return null;
-    return useItemPreviewData(() => entity);
-  });
-
   const name = createMemo(() => {
     const attachment = props.attachment;
     if (!attachment.metadata) return '';
 
-    const preview = previewData();
-    if (preview) {
-      return preview.name();
+    if (attachment.metadata.type === 'email') {
+      return attachment.metadata.email_subject;
+    } else if (attachment.metadata.type === 'image') {
+      return attachment.metadata.image_name;
     }
 
-    return attachment.metadata.type === 'email'
-      ? attachment.metadata.email_subject
-      : attachment.metadata.type === 'image'
-        ? attachment.metadata.image_name
-        : '';
+    const entity = {
+      id: attachment.attachmentId,
+      type: attachment.metadata.type,
+    };
+    const { name } = useItemPreviewData(() => entity);
+    return name();
   });
 
   const block = createMemo(() => {
     const attachment = props.attachment;
     if (!attachment.metadata) return;
-    return attachment.metadata.type === 'document'
-      ? fileTypeToBlockName(attachment.metadata.document_type)
-      : attachment.metadata.type === 'image'
-        ? 'image'
-        : 'channel';
+    const type = attachment.metadata.type;
+    if (type === 'image') return;
+    return itemToBlockName({
+      type,
+      fileType:
+        type === 'document' ? attachment.metadata.document_type : undefined,
+    });
   });
 
   const onClick = (e: MouseEvent) => {
