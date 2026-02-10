@@ -5,4 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type NotificationTemporalDataUpdatedAt = number | null;
+/**
+ * The file type of the document
+ */
+export type DocumentMentionMetadataFileType = string | null;

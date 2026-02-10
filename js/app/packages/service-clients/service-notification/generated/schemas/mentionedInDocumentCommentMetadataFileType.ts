@@ -6,6 +6,6 @@
  */
 
 /**
- * The file type of the document
+ * The file type of the document.
  */
-export type DocumentMentionMetadataAllOfFileType = string | null;
+export type MentionedInDocumentCommentMetadataFileType = string | null;
