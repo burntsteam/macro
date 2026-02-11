@@ -79,6 +79,7 @@ const createDefaultMessageListContext = (index: Accessor<number>) =>
   createMemo<MessageListContext>(() => ({
     index: index(),
     isNewMessage: false,
+    isFirstNewMessage: false,
     isParentNewMessage: false,
     threadIndex: -1,
     previousNonThreadedMessage: undefined,
@@ -361,7 +362,6 @@ function MessageListImpl(props: MessageListProps) {
   const [virtualHandle, setVirtualHandle] = createSignal<VirtualizerHandle>();
   const [containerRef, setContainerRef] = createSignal<HTMLDivElement>();
 
-  const [newIndicatorShown, setNewIndicatorShown] = createSignal<number>();
   const [hasUserScrolled, setHasUserScrolled] = createSignal(false);
   const [messageListContext, setMessageListContext] =
     createStore<MessageListContextLookup>({});
@@ -435,11 +435,18 @@ function MessageListImpl(props: MessageListProps) {
     });
   });
 
-  const lastViewed = createMemo(() => {
+  // Snapshot the lastViewed time so it reflects the pre-session value.
+  // Without this, the activity mutation on channel open would update
+  // lastViewed reactively, causing the "New" indicator to disappear.
+  const lastViewed = createMemo<string | null | undefined>((prev) => {
+    if (prev !== undefined) return prev;
     return props?.latestActivity?.viewed_at;
   });
 
+  const [newMessagesDismissed, setNewMessagesDismissed] = createSignal(false);
+
   const checkIfNewMessage = (message: Message) => {
+    if (newMessagesDismissed()) return false;
     const lastViewed_ = lastViewed();
     const openedChannel_ = props.openedChannel;
     return (
@@ -449,6 +456,11 @@ function MessageListImpl(props: MessageListProps) {
       userId() !== message.sender_id &&
       new Date(message.created_at) < openedChannel_
     );
+  };
+
+  const dismissNewMessages = () => {
+    setNewMessagesDismissed(true);
+    computeListContext(flattenedThreaded());
   };
 
   // Keep some additional timing information for goToLocationFromParams
@@ -906,8 +918,6 @@ function MessageListImpl(props: MessageListProps) {
       orderedMessages={props.orderedMessages}
       threadChildren={params.threadChildren}
       threadSiblings={params.threadSiblings}
-      newIndicatorShown={newIndicatorShown}
-      setNewIndicatorShown={setNewIndicatorShown}
       virtualHandle={virtualHandle()!}
       container={containerRef()}
       listContext={params.listContext}
@@ -915,6 +925,7 @@ function MessageListImpl(props: MessageListProps) {
       channelId={() => props.channelId}
       attachments={props.attachments}
       reactions={props.reactions}
+      onDismissNewMessages={dismissNewMessages}
     />
   );
 
