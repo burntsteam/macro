@@ -5,7 +5,7 @@ import { useInfiniteQuery } from '@tanstack/solid-query';
 import { SERVER_HOSTS } from 'core/constant/servers';
 import { platformFetch } from 'core/util/platformFetch';
 import { type Accessor, createMemo } from 'solid-js';
-import type { EmailEntity } from '../types/entity';
+import type { EmailEntity } from '@entity';
 import {
   createApiTokenQuery,
   handleFetchResponse,
@@ -13,7 +13,7 @@ import {
 } from './auth';
 import { queryKeys } from './key';
 
-export type FetchPaginatedEmailsParams = PreviewsInboxCursorParams & {
+type FetchPaginatedEmailsParams = PreviewsInboxCursorParams & {
   // path parameter
   view: PreviewViewStandardLabel;
 };
