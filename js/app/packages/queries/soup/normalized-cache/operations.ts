@@ -285,7 +285,7 @@ export function optimisticUpdateSoupItemViewedAt(itemId: string) {
   } else {
     optimisticUpdateSoupEntity({
       tag: current.tag,
-      data: { id: itemId, viewedAt: now.getTime() },
+      data: { id: itemId, viewedAt: now.toISOString() },
       frecency_score: current.frecency_score,
     });
   }
