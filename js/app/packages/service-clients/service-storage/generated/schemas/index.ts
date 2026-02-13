@@ -312,6 +312,7 @@ export * from './getDocumentListResultCreatedAt';
 export * from './getDocumentListResultDocumentFamilyId';
 export * from './getDocumentListResultFileType';
 export * from './getDocumentListResultUpdatedAt';
+export * from './getDocumentLocationV3Params';
 export * from './getDocumentPermissionsResponseDataV2';
 export * from './getDocumentProcessingResult';
 export * from './getDocumentProcessingResultResponse';

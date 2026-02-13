@@ -11,6 +11,9 @@ use comms::{
 };
 use comms_service::CommsHandlerState;
 use connection_gateway_client::client::ConnectionGatewayClient;
+use documents_hex::domain::service::DocumentServiceImpl;
+use documents_hex::inbound::axum_router::DocumentRouterState;
+use documents_hex::outbound::pg_document_repo::PgDocumentRepo;
 use dynamodb_client::DynamodbClient;
 use email::{domain::service::EmailServiceImpl, outbound::EmailPgRepo};
 use entity_access::{domain::service::EntityAccessServiceImpl, outbound::PgAccessRepository};
@@ -63,6 +66,10 @@ type PropertiesService = PropertiesServiceImpl<
 /// Type alias for the entity access service.
 pub(crate) type EntityAccessService = EntityAccessServiceImpl<PgAccessRepository>;
 
+/// Type alias for the documents router state.
+pub(crate) type DocumentsState =
+    DocumentRouterState<DocumentServiceImpl<PgDocumentRepo>, EntityAccessService>;
+
 /// Type alias for the ChannelServiceImpl used by comms
 pub(crate) type CommsChannelService =
     ChannelServiceImpl<PgCommsRepo, UserRepoImpl, FrecencyPgStorage>;
@@ -98,6 +105,7 @@ pub(crate) struct ApiContext {
     pub permissions_token_secret:
         LocalOrRemoteSecret<comms_service::DocumentPermissionJwtSecretKey>,
     pub entity_access_service: Arc<EntityAccessService>,
+    pub documents_state: DocumentsState,
     pub channels_state: DssChannelsState,
 }
 
