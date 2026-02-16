@@ -3,7 +3,10 @@ import {
   createSoupState,
   type SoupState,
 } from '@app/component/next-soup/create-soup-state';
-import { getFolderFileTypes } from '@app/component/next-soup/filters/filters';
+import {
+  type FilterID,
+  getFolderFileTypes,
+} from '@app/component/next-soup/filters/filters';
 import { sortEntitiesForSearch } from '@app/component/next-soup/soup-view/sort-options';
 import { deduplicateEntities } from '@app/component/next-soup/utils';
 import { arrayEquals } from '@core/util/compareUtils';
@@ -18,8 +21,10 @@ import {
   useSoupItemsQuery,
 } from '@queries/soup/items';
 import { useSearchSoupQuery } from '@queries/soup/search';
-import type { SearchArgs } from '@service-search/client';
-import type { UnifiedSearchIndex } from '@service-search/generated/models';
+import type {
+  UnifiedSearchIndex,
+  UnifiedSearchRequest,
+} from '@service-search/generated/models';
 import {
   type Accessor,
   createContext,
@@ -146,27 +151,32 @@ export const SoupViewContextProvider: FlowComponent<
 
   const unifiedSearchIncludeArray = createMemo<UnifiedSearchIndex[]>(
     () => {
-      let types = soup.filters.activeIds();
+      const types = soup.filters.activeIds() as FilterID[];
       // NOTE: empty array means search all
-      if (types.length === 0) types = [];
       const includeArray: UnifiedSearchIndex[] = [];
       for (const type of types) {
         match(type)
-          .with('document', () => {
+          .with('document', 'file', 'task', () => {
             includeArray.push('documents');
           })
           .with('agent', () => {
             includeArray.push('chats');
           })
-          .with('people', 'teams', () => {
+          .with('people', 'teams', 'channels', () => {
             includeArray.push('channels');
           })
           .with('email', () => {
             includeArray.push('emails');
           })
-          .with('project', () => {
-            includeArray.push('projects');
-          });
+          .with(
+            'signal',
+            'noise',
+            'explicit-noise',
+            'unread',
+            'not-done',
+            () => {}
+          )
+          .exhaustive();
       }
       return Array.from(new Set(includeArray));
     },
@@ -178,31 +188,6 @@ export const SoupViewContextProvider: FlowComponent<
     () => debouncedSearchForService().length >= 3
   );
   const isSearchDisabled = createMemo(() => !validSearchTerms());
-
-  const searchUnifiedNameContentQueryParams = createMemo(
-    (prev: SearchArgs | undefined): SearchArgs => {
-      if (prev && prev.request.terms?.[0] === debouncedSearchForService()) {
-        return prev;
-      }
-
-      return {
-        params: {
-          cursor: null,
-          page_size: 100,
-        },
-        request: {
-          search_on: 'name_content',
-          match_type: 'partial',
-          terms:
-            debouncedSearchForService().length > 0
-              ? [debouncedSearchForService()]
-              : undefined,
-          // filters: unifiedSearchFilters(),
-          include: unifiedSearchIncludeArray(),
-        },
-      };
-    }
-  );
 
   const queryFilters = createMemo(() => {
     const base = internalQueryFilters();
@@ -270,6 +255,22 @@ export const SoupViewContextProvider: FlowComponent<
     };
   });
 
+  const searchUnifiedNameContentRequest = createMemo(
+    (): UnifiedSearchRequest => {
+      const terms = debouncedSearchForService();
+      const include = unifiedSearchIncludeArray();
+      const filters = searchFilters();
+
+      return {
+        search_on: 'name_content',
+        match_type: 'partial',
+        terms: terms.length > 0 ? [terms] : undefined,
+        include,
+        filters,
+      };
+    }
+  );
+
   const itemsQuery = useSoupItemsQuery(
     () => ({
       params: {
@@ -289,8 +290,7 @@ export const SoupViewContextProvider: FlowComponent<
         page_size: 100,
       },
       body: {
-        ...searchFilters(),
-        ...searchUnifiedNameContentQueryParams().request,
+        ...searchUnifiedNameContentRequest(),
       },
     }),
     () => ({
