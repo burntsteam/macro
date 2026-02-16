@@ -905,6 +905,19 @@
           }
         }
       },
+      "EmailSearchParticipant": {
+        "type": "object",
+        "description": "A participant (sender) in an email thread",
+        "required": ["email"],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": ["string", "null"]
+          }
+        }
+      },
       "EmailSearchRequest": {
         "allOf": [
           {
@@ -975,7 +988,8 @@
           "owner_id",
           "thread_id",
           "user_id",
-          "email_message_search_results"
+          "email_message_search_results",
+          "participants"
         ],
         "properties": {
           "email_message_search_results": {
@@ -996,6 +1010,13 @@
           },
           "owner_id": {
             "type": "string"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailSearchParticipant"
+            },
+            "description": "The participants (senders) in this email thread"
           },
           "subject": {
             "type": ["string", "null"],
@@ -1019,11 +1040,30 @@
           },
           {
             "type": "object",
-            "required": ["created_at", "updated_at"],
+            "required": [
+              "created_at",
+              "updated_at",
+              "is_read",
+              "inbox_visible",
+              "is_draft",
+              "is_important"
+            ],
             "properties": {
               "created_at": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "inbox_visible": {
+                "type": "boolean"
+              },
+              "is_draft": {
+                "type": "boolean"
+              },
+              "is_important": {
+                "type": "boolean"
+              },
+              "is_read": {
+                "type": "boolean"
               },
               "snippet": {
                 "type": ["string", "null"]

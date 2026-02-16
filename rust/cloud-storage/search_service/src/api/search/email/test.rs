@@ -17,12 +17,16 @@ fn create_email_history(thread_id: &str) -> models_email::service::message::Thre
         subject: Some("subject".to_string()),
         sender: "sender@example.com".to_string(),
         pretty_sender: "Pretty Sender".to_string(),
+        is_read: false,
+        inbox_visible: true,
+        is_draft: false,
+        is_important: false,
     }
 }
 
 #[test]
 fn test_construct_search_result_empty_input() {
-    let result = construct_search_result(vec![], HashMap::new(), HashMap::new());
+    let result = construct_search_result(vec![], HashMap::new(), HashMap::new(), HashMap::new());
     assert!(result.is_ok());
     assert_eq!(result.unwrap().len(), 0);
 }
@@ -56,7 +60,13 @@ fn test_construct_search_result_single_thread() {
     let mut thread_histories = HashMap::new();
     thread_histories.insert(thread_uuid, create_email_history(&thread_uuid.to_string()));
 
-    let result = construct_search_result(search_results, thread_histories, HashMap::new()).unwrap();
+    let result = construct_search_result(
+        search_results,
+        thread_histories,
+        HashMap::new(),
+        HashMap::new(),
+    )
+    .unwrap();
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].extra.thread_id, thread_uuid);
@@ -207,12 +217,27 @@ fn test_sort_stability() {
         );
     }
 
-    let result1 =
-        construct_search_result(input.clone(), thread_histories.clone(), HashMap::new()).unwrap();
-    let result2 =
-        construct_search_result(input.clone(), thread_histories.clone(), HashMap::new()).unwrap();
-    let result3 =
-        construct_search_result(input.clone(), thread_histories.clone(), HashMap::new()).unwrap();
+    let result1 = construct_search_result(
+        input.clone(),
+        thread_histories.clone(),
+        HashMap::new(),
+        HashMap::new(),
+    )
+    .unwrap();
+    let result2 = construct_search_result(
+        input.clone(),
+        thread_histories.clone(),
+        HashMap::new(),
+        HashMap::new(),
+    )
+    .unwrap();
+    let result3 = construct_search_result(
+        input.clone(),
+        thread_histories.clone(),
+        HashMap::new(),
+        HashMap::new(),
+    )
+    .unwrap();
 
     assert_eq!(result1.len(), 5);
     assert_eq!(result2.len(), 5);

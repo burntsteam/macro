@@ -36,6 +36,13 @@ pub struct EmailSearchResult {
     pub score: Option<f64>,
 }
 
+/// A participant (sender) in an email thread
+#[derive(Debug, Serialize, Deserialize, ToSchema, JsonSchema, Clone)]
+pub struct EmailSearchParticipant {
+    pub email: String,
+    pub name: Option<String>,
+}
+
 /// A single response item, part of the EmailSearchResponse object
 #[derive(Debug, Serialize, Deserialize, ToSchema, JsonSchema)]
 pub struct EmailSearchResponseItem {
@@ -58,6 +65,8 @@ pub struct EmailSearchResponseItem {
     /// The search results for the document
     /// This may be empty if the search result match was on the email subject only
     pub email_message_search_results: Vec<EmailSearchResult>,
+    /// The participants (senders) in this email thread
+    pub participants: Vec<EmailSearchParticipant>,
 }
 
 /// EmailSearchResponseItem object with email metadata we fetch from email service. we don't store these
@@ -69,6 +78,10 @@ pub struct EmailSearchResponseItemWithMetadata {
     pub updated_at: DateTime<Utc>,
     pub viewed_at: Option<DateTime<Utc>>,
     pub snippet: Option<String>,
+    pub is_read: bool,
+    pub inbox_visible: bool,
+    pub is_draft: bool,
+    pub is_important: bool,
     #[serde(flatten)]
     pub extra: EmailSearchResponseItem,
 }
