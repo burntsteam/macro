@@ -393,8 +393,6 @@ export const SoupViewContextProvider: FlowComponent<
 
       const merged: SoupEntity[] = [...service, ...local];
 
-      if (merged.length === 0) return prev;
-
       for (let i = 0; i < merged.length; i++) {
         const entity = merged[i];
         if (entity.notifications) continue;
