@@ -177,7 +177,7 @@ export const SoupViewList = (props: SoupViewListProps) => {
     setSearchText,
     setQueryFilters,
     queryFilters,
-    featuredCount,
+    featuredIds,
   } = useSoupView();
   const { getSplitCount } = useSplitLayout();
 
@@ -215,8 +215,7 @@ export const SoupViewList = (props: SoupViewListProps) => {
 
     createEffect(
       on(
-        () =>
-          [soup.filters.activeIds(), searchText(), featuredCount()] as const,
+        () => [soup.filters.activeIds(), searchText(), featuredIds()] as const,
         () => {
           focusFirstEntity();
         },
@@ -499,6 +498,8 @@ export const SoupViewList = (props: SoupViewListProps) => {
     restoreState();
   };
 
+  const featuredCount = createMemo(() => featuredIds().length);
+
   return (
     <div
       class="size-full flex bracket-never"
@@ -567,9 +568,11 @@ export const SoupViewList = (props: SoupViewListProps) => {
                       }
                     };
 
-                    if (i() === Math.floor(rows().length * 0.8)) {
-                      debouncedFetchMore();
-                    }
+                    createEffect(() => {
+                      if (i() === Math.floor(rows().length * 0.8)) {
+                        debouncedFetchMore();
+                      }
+                    });
 
                     return (
                       <>

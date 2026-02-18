@@ -72,6 +72,7 @@ import { Login } from './auth/Login';
 import { setCookie } from './auth/Shared';
 import { makeEmailAuthComponents } from './EmailAuth';
 import { GlobalAppStateProvider } from './GlobalAppState';
+import { SearchProvider } from './next-soup/search-context';
 import { Layout } from './Layout';
 import MacroJump from './MacroJump';
 import Onboarding from './Onboarding';
@@ -406,29 +407,31 @@ export function Root() {
             <UserInfoSideEffects />
             <ConfiguredGlobalAppStateProvider>
               <ChannelsContextProvider>
-                <TabAttachmentsInit />
-                <ReactiveFavicon />
-                <Title>{tabTitle()}</Title>
-                <MacroJump />
-                <Visor />
-                <SuspenseContextComp fallback={<RootSuspenseFallback />}>
-                  <IsomorphicRouter
-                    transformUrl={transformShortIdInUrlPathname}
-                    root={Layout}
-                    rootPreload={rootPreload}
-                    base={ROUTER_BASE}
-                  >
-                    {{
-                      path: '/',
-                      component: TauriRouteListener,
-                      children: ROUTES,
-                    }}
-                  </IsomorphicRouter>
-                </SuspenseContextComp>
-                <ToastRegion />
-                <Show when={ENABLE_WEBSOCKET_DEBUGGER}>
-                  <WebsocketDebugger />
-                </Show>
+                <SearchProvider>
+                  <TabAttachmentsInit />
+                  <ReactiveFavicon />
+                  <Title>{tabTitle()}</Title>
+                  <MacroJump />
+                  <Visor />
+                  <SuspenseContextComp fallback={<RootSuspenseFallback />}>
+                    <IsomorphicRouter
+                      transformUrl={transformShortIdInUrlPathname}
+                      root={Layout}
+                      rootPreload={rootPreload}
+                      base={ROUTER_BASE}
+                    >
+                      {{
+                        path: '/',
+                        component: TauriRouteListener,
+                        children: ROUTES,
+                      }}
+                    </IsomorphicRouter>
+                  </SuspenseContextComp>
+                  <ToastRegion />
+                  <Show when={ENABLE_WEBSOCKET_DEBUGGER}>
+                    <WebsocketDebugger />
+                  </Show>
+                </SearchProvider>
               </ChannelsContextProvider>
             </ConfiguredGlobalAppStateProvider>
           </UserContextProvider>
