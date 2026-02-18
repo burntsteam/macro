@@ -146,6 +146,11 @@ if (LOCAL_ONLY) {
     'entity-debug',
     lazy(() => import('@entity/debug/DebugEntityView'))
   );
+
+  registerComponent(
+    'quick-access-list',
+    lazy(() => import('@core/context/quickAccess/debug/QuickAccessAll'))
+  );
 }
 
 if (DEV_MODE_ENV) {
