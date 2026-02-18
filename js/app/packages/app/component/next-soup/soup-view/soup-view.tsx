@@ -253,6 +253,7 @@ export const SoupViewList = (props: SoupViewListProps) => {
   useEntityActionHotkeys({
     scopeId: scopeId(),
     soup,
+    splitHandle: panel.handle,
   });
 
   // Property editor
