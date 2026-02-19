@@ -8060,6 +8060,7 @@ name = "seed_cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aws-sdk-s3",
  "chrono",
  "clap",
  "comms_db_client",
@@ -8067,6 +8068,8 @@ dependencies = [
  "email_db_client",
  "fusionauth",
  "futures",
+ "macro_aws_config",
+ "macro_db_client",
  "macro_entrypoint",
  "macro_env",
  "macro_env_var",
@@ -8074,6 +8077,7 @@ dependencies = [
  "mockall",
  "model",
  "models_email",
+ "models_permissions",
  "rand 0.9.0",
  "reqwest",
  "serde",
