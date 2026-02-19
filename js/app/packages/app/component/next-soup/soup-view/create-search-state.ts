@@ -14,7 +14,10 @@ import { arrayEquals } from '@core/util/compareUtils';
 import { debouncedDependent } from '@core/util/debounce';
 import type { EntityData } from '@entity';
 import type { SoupItemsQueryFilters } from '@queries/soup/items';
-import { useSearchSoupQuery } from '@queries/soup/search';
+import {
+  useSearchSoupQuery,
+  validateSearchServiceText,
+} from '@queries/soup/search';
 import type {
   UnifiedSearchIndex,
   UnifiedSearchRequest,
@@ -83,10 +86,9 @@ export const createSearchState = ({
     { equals: arrayEquals }
   );
 
-  const validSearchTerms = createMemo(
-    () => debouncedSearchForService().length >= 3
+  const isSearchServiceDisabled = createMemo(
+    () => !validateSearchServiceText(debouncedSearchForService())
   );
-  const isSearchServiceDisabled = createMemo(() => !validSearchTerms());
 
   const searchFilters = createMemo(() => {
     const {
@@ -208,6 +210,18 @@ export const createSearchState = ({
     return ids;
   });
 
+  const isLocalSearchSettling = createMemo(
+    () => isSearching() && trimmedSearchText() !== debouncedSearchForLocal()
+  );
+
+  const isSearchServiceLoading = createMemo(() => {
+    if (!isSearching()) return false;
+    if (!validateSearchServiceText(trimmedSearchText())) return false;
+    if (!isSearchServiceDebounceSettled()) return true;
+    if (searchQuery.isFetching && !searchQuery.isFetchingNextPage) return true;
+    return false;
+  });
+
   return {
     searchText,
     setSearchText,
@@ -216,6 +230,8 @@ export const createSearchState = ({
     serviceSearchResults,
     featuredIds,
     searchQuery,
+    isSearchServiceLoading,
+    isLocalSearchSettling,
   };
 };
 

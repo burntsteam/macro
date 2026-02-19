@@ -67,6 +67,8 @@ interface SoupViewContextValues {
   setSearchText: (value: string) => void;
   featuredIds: Accessor<string[]>;
   rows: Accessor<SoupRow[]>;
+  isSearchServiceLoading: Accessor<boolean>;
+  isLocalSearchSettling: Accessor<boolean>;
   queryFilters: Accessor<SoupItemsQueryFilters>;
   setQueryFilters: Setter<SoupItemsQueryFilters>;
   statusFilter: Accessor<string | undefined>;
@@ -224,6 +226,14 @@ export const SoupViewContextProvider: FlowComponent<
 
       const merged: SoupEntity[] = [...service, ...local];
 
+      if (
+        merged.length === 0 &&
+        prev.length > 0 &&
+        search.isLocalSearchSettling()
+      ) {
+        return prev;
+      }
+
       for (let i = 0; i < merged.length; i++) {
         const entity = merged[i];
         if (entity.notifications) continue;
@@ -315,11 +325,7 @@ export const SoupViewContextProvider: FlowComponent<
     soup,
     source: {
       data: entities,
-      isLoading: () => {
-        if (itemsQuery.isLoading) return true;
-        if (searchQuery.isLoading) return true;
-        return false;
-      },
+      isLoading: () => itemsQuery.isLoading,
       isFetching: () => itemsQuery.isFetching || searchQuery.isFetching,
       isFetchingNextPage: () =>
         itemsQuery.isFetchingNextPage || searchQuery.isFetchingNextPage,
@@ -342,6 +348,8 @@ export const SoupViewContextProvider: FlowComponent<
     searchText: search.searchText,
     setSearchText: search.setSearchText,
     featuredIds: search.featuredIds,
+    isSearchServiceLoading: search.isSearchServiceLoading,
+    isLocalSearchSettling: search.isLocalSearchSettling,
     queryFilters,
     setQueryFilters,
     statusFilter,
