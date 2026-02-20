@@ -14,9 +14,8 @@ import {
 import { DEFAULT_CHAT_NAME } from '@block-chat/definition';
 import { useBlockId } from '@core/block';
 import { DeprecatedIconButton } from '@core/component/DeprecatedIconButton';
-import { ReferencesModal } from '@core/component/ReferencesModal';
-import { ShareButton } from '@core/component/TopBar/ShareButton';
-import { useGetPermissions } from '@core/signal/permissions';
+import { ReferencesButton } from '@core/component/ReferencesModal';
+import { ShareTrigger } from '@core/component/TopBar/ShareButton';
 import { useBlockDocumentName } from '@core/util/currentBlockDocumentName';
 import Notepad from '@icon/regular/notepad.svg';
 import { useOpenInstructionsMd } from 'core/component/AI/util/instructions';
@@ -39,7 +38,6 @@ export function TopBar() {
     }
   });
 
-  const userPermissions = useGetPermissions();
   const openInstructions = useOpenInstructionsMd();
 
   const ops: FileOperation[] = [
@@ -68,29 +66,22 @@ export function TopBar() {
         </div>
       </SplitToolbarLeft>
       <SplitToolbarRight>
-        <div class="flex items-center p-1 h-full">
-          <DeprecatedIconButton
-            icon={Notepad}
-            size="sm"
-            theme="clear"
-            tooltip={{ label: 'Edit AI Instructions' }}
-            onClick={openInstructions}
-          />
-          <ReferencesModal
-            documentId={blockId}
-            documentName={chatName()}
-            buttonSize="sm"
-            entityType="chat"
-          />
-          <div class="flex items-center">
-            <SplitPermissionsBadge />
-            <ShareButton
-              id={blockId}
-              name={chatName()}
-              userPermissions={userPermissions()}
-              itemType="chat"
-            />
-          </div>
+        <DeprecatedIconButton
+          icon={Notepad}
+          size="sm"
+          theme="clear"
+          tooltip={{ label: 'Edit AI Instructions' }}
+          onClick={openInstructions}
+        />
+        <ReferencesButton
+          documentId={blockId}
+          documentName={chatName()}
+          buttonSize="sm"
+          entityType="chat"
+        />
+        <div class="flex items-center">
+          <SplitPermissionsBadge />
+          <ShareTrigger />
         </div>
       </SplitToolbarRight>
     </>
