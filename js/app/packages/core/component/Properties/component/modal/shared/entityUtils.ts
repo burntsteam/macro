@@ -60,8 +60,9 @@ export function useQuickAccessEntities<T extends EntityType>(
   const buckets = () => {
     const entityType_ = entityType();
     if (!entityType_) return null;
-    if (!Array.isArray(entityType_)) return entityTypeToBuckets(entityType_);
-    return entityType_.flatMap(entityTypeToBuckets);
+    if (Array.isArray(entityType_))
+      return entityType_.flatMap(entityTypeToBuckets);
+    return entityTypeToBuckets(entityType_);
   };
   const items = (): EntityTypeItemMap[T][] => {
     const b = buckets();
