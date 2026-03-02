@@ -41,7 +41,6 @@ import {
   type SearchLocation,
   type ProjectEntity,
 } from '@entity';
-import { queryKeys } from '@macro-entity';
 import { useQueryClient } from '@queries/client';
 import { createEffectOnEntityTypeNotification } from '@notifications';
 import { debounce } from '@solid-primitives/scheduled';
@@ -78,7 +77,10 @@ import { isMobile } from '@core/mobile/isMobile';
 import type { SystemSortOption } from '@app/component/next-soup/soup-view/sort-options';
 import { usePropertyEditorHotkeys } from '@app/component/property-edit-modal/hooks/usePropertyEditorHotkeys';
 import type { SoupItemsQueryFilters } from '@queries/soup/items';
-import { refetchSoupEntity } from '@queries/soup/normalized-cache';
+import {
+  invalidateSoupEntity,
+  refetchSoupEntity,
+} from '@queries/soup/normalized-cache';
 
 const useSoupNotificationInvalidators = () => {
   const notificationSource = useGlobalNotificationSource();
@@ -97,14 +99,10 @@ const useSoupNotificationInvalidators = () => {
 
   createEffectOnEntityTypeNotification(
     notificationSource,
-    'email',
+    'email_thread',
     (notification) => {
       refetchSoupEntity(notification.entity_id, 'emailThread');
-      entityQueryClient.invalidateQueries({
-        // HACK: this needs to be improved, since we use a single query, per entity invalidations
-        // become a little more complicated.
-        queryKey: queryKeys.all.entity,
-      });
+      invalidateSoupEntity(notification.entity_id);
     }
   );
 
