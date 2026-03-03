@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::FromRef;
-use github::domain::service::GithubServiceImpl;
+use github::domain::service::GithubLinkServiceImpl;
 use github::outbound::github_auth_client::GithubAuthImpl;
 use github::outbound::github_oauth_client::GithubOauthImpl;
 use github::outbound::pg_github_repo::PgGithubRepo;
@@ -44,13 +44,13 @@ pub(crate) type NotificationIngressType = NotificationIngressService<
     StateMachine,
 >;
 
-pub(crate) type GithubServiceType =
-    GithubServiceImpl<PgGithubRepo, GithubOauthImpl, GithubAuthImpl>;
+pub(crate) type GithubLinkServiceType =
+    GithubLinkServiceImpl<PgGithubRepo, GithubOauthImpl, GithubAuthImpl>;
 
 #[derive(Clone, FromRef)]
 pub(crate) struct ApiContext {
     pub db: PgPool,
-    pub github_service: Arc<GithubServiceType>,
+    pub github_link_service: Arc<GithubLinkServiceType>,
     pub auth_client: Arc<fusionauth::FusionAuthClient>,
     pub macro_cache_client: Arc<MacroCache>,
     pub stripe_client: Arc<stripe::Client>,
