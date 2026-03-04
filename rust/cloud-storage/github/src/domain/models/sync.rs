@@ -86,6 +86,56 @@ impl ValidatedGithubWebhookEvent {
         texts
     }
 
+    /// Extract the `action` field from the webhook payload (e.g. "opened", "closed", "created").
+    pub fn action(&self) -> Option<&str> {
+        self.payload.get("action").and_then(|v| v.as_str())
+    }
+
+    /// Whether the pull request was merged (only meaningful for `closed` actions).
+    pub fn is_merged(&self) -> bool {
+        self.payload
+            .get("pull_request")
+            .and_then(|pr| pr.get("merged"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    }
+
+    /// Derive the task status string based on the event, if applicable.
+    ///
+    /// For `pull_request` events: `opened`/`reopened` → `"In Review"`,
+    /// `closed` + merged → `"Completed"`, `closed` → `"Canceled"`.
+    ///
+    /// For comment/review events that newly associate a task with an open PR,
+    /// returns `"In Review"`.
+    ///
+    /// Returns `None` when no status change is warranted.
+    pub fn task_status_for_event(&self) -> Option<&'static str> {
+        match self.parsed_event_type() {
+            GithubWebhookEventType::PullRequest => match self.action() {
+                Some("opened" | "reopened" | "edited") => Some("In Review"),
+                Some("closed") if self.is_merged() => Some("Completed"),
+                Some("closed") => Some("Canceled"),
+                _ => None,
+            },
+            GithubWebhookEventType::IssueComment
+            | GithubWebhookEventType::PullRequestReview
+            | GithubWebhookEventType::PullRequestReviewComment => {
+                // A comment/review that introduces a new task association on an
+                // open PR should mark the task as "In Review".
+                let is_open = self
+                    .payload
+                    .get("pull_request")
+                    .or_else(|| self.payload.get("issue"))
+                    .and_then(|pr| pr.get("state"))
+                    .and_then(|v| v.as_str())
+                    == Some("open");
+
+                if is_open { Some("In Review") } else { None }
+            }
+            GithubWebhookEventType::Unknown(_) => None,
+        }
+    }
+
     /// Extract the pull request / issue number from the webhook payload.
     pub fn pull_number(&self) -> Option<u64> {
         self.payload
