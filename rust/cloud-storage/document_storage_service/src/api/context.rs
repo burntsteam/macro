@@ -22,6 +22,7 @@ use email::{domain::service::EmailServiceImpl, outbound::EmailPgRepo};
 use entity_access::{domain::service::EntityAccessServiceImpl, outbound::PgAccessRepository};
 use frecency::{domain::services::FrecencyQueryServiceImpl, outbound::postgres::FrecencyPgStorage};
 use github::domain::service::GithubSyncServiceImpl;
+use github::outbound::github_sync_client::GithubSyncClientImpl;
 use macro_auth::middleware::decode_jwt::JwtValidationArgs;
 use macro_env_var::env_var;
 use macro_sha_count_client::Redis;
@@ -126,7 +127,13 @@ pub(crate) type CommsState = CommsRouterState<CommsChannelService>;
 pub(crate) type DssChannelsState =
     ChannelsRouterState<ChannelMessagesServiceImpl<PgChannelMessagesRepo>, PgChannelAccessCheck>;
 
-pub(crate) type GithubSyncServiceType = GithubSyncServiceImpl;
+/// Type alias for the document service used by the github sync service.
+pub(crate) type GithubDocumentService =
+    DocumentServiceImpl<PgDocumentRepo, S3UploadUrlAdapter, TaskPropertiesAdapter>;
+
+/// Type alias for the github sync service.
+pub(crate) type GithubSyncServiceType =
+    GithubSyncServiceImpl<GithubDocumentService, GithubSyncClientImpl>;
 
 #[derive(Clone, FromRef)]
 pub(crate) struct ApiContext {
