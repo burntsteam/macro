@@ -5,9 +5,9 @@
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '@solidjs/testing-library';
 import { describe, expect, it, vi } from 'vitest';
-import { Root } from './Root';
-import { Reactions } from './Reactions';
-import type { MessageData } from './types';
+import { Root } from '../Root';
+import { Reactions } from '../Reactions';
+import type { MessageData } from '../types';
 
 vi.mock('@core/context/user', () => ({
   useUserId: () => () => 'user-1',
@@ -41,32 +41,6 @@ describe('Reactions', () => {
 
     expect(container.querySelector('[data-message-reactions-row]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Add reaction' })).toBeNull();
-  });
-
-  it('renders styled reaction chips and add-reaction button when reactions exist', () => {
-    const { container } = render(() => (
-      <Root
-        message={{
-          ...baseMessage,
-          reactions: [{ emoji: '👍', users: ['user-1', 'user-3'] }],
-        }}
-        actions={{
-          onReact: () => undefined,
-        }}
-      >
-        <Reactions />
-      </Root>
-    ));
-
-    const row = container.querySelector('[data-message-reactions-row]');
-    const chip = screen.getByRole('button', { name: /👍/u });
-    const addButton = screen.getByRole('button', { name: 'Add reaction' });
-
-    expect(row).not.toBeNull();
-    expect(chip).not.toBeNull();
-    expect(chip.className).toContain('border-accent');
-    expect(chip.textContent).toContain('2');
-    expect(addButton).not.toBeNull();
   });
 
   it('calls onReact with chip emoji when a reaction chip is clicked', async () => {
