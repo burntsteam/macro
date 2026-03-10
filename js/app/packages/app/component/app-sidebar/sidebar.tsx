@@ -1,3 +1,4 @@
+import KeyboardIcon from '@icon/regular/keyboard.svg';
 import GearIcon from '@phosphor-icons/core/regular/gear.svg?component-solid';
 import { type Component, createSignal, For, type JSX, Show } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
@@ -110,7 +111,7 @@ type AppSidebarProps = {
 
 export const AppSidebar = (props: AppSidebarProps) => {
   const layout = useSplitLayout();
-  const { toggleSettings } = useSettingsState();
+  const { toggleSettings, openSettings } = useSettingsState();
 
   const handleCommandPaletteClick = () => {
     CommandState.toggle();
@@ -172,7 +173,7 @@ export const AppSidebar = (props: AppSidebarProps) => {
       </Show>
       <div
         class={cn(
-          'group/sidebar h-full bg-page pt-2 flex flex-col gap-4 mobile:absolute mobile:z-modal-content transition-[width_transform_opacity] duration-150 ease-in-out',
+          'group/sidebar h-full bg-page py-2 flex flex-col gap-4 mobile:absolute mobile:z-modal-content transition-[width_transform_opacity] duration-150 ease-in-out',
           isExpanded() &&
             'max-w-56 w-full mobile:max-w-2/3 translate-x-0 opacity-100',
           props.sidebarState === 'hidden' &&
@@ -207,19 +208,14 @@ export const AppSidebar = (props: AppSidebarProps) => {
                 </Button>
               </Tooltip>
               <Tooltip
-                tooltip={
-                  <LabelAndHotKey
-                    label="Settings"
-                    hotkeyToken="global.toggleSettings"
-                  />
-                }
+                tooltip={<LabelAndHotKey label="Create new" shortcut="c" />}
               >
                 <Button
                   variant="tertiary"
                   size="icon-sm"
-                  onClick={toggleSettings}
+                  onClick={handleCreateClick}
                 >
-                  <GearIcon />
+                  <PlusIcon />
                 </Button>
               </Tooltip>
             </Show>
@@ -281,6 +277,44 @@ export const AppSidebar = (props: AppSidebarProps) => {
           {/*   <UnreadNotificationsWidget /> */}
           {/* </div> */}
         </Show>
+
+        <div class="mt-auto w-full px-2">
+          <Tooltip
+            class="w-full"
+            tooltip={
+              <LabelAndHotKey
+                label="Settings"
+                hotkeyToken="global.toggleSettings"
+              />
+            }
+          >
+            <Button
+              class={cn(
+                'flex items-center justify-start text-sm gap-2 cursor-default',
+                isSlim() ? 'justify-center aspect-square' : 'w-full'
+              )}
+              variant="ghost"
+              size={isSlim() ? 'icon-sm' : 'sm'}
+              onClick={toggleSettings}
+            >
+              <GearIcon class="size-4 shrink-0" />
+              <span class={cn(isSlim() ? 'sr-only' : 'block')}>Settings</span>
+            </Button>
+          </Tooltip>
+
+          <Button
+            class={cn(
+              'flex items-center justify-start text-sm gap-2 cursor-default',
+              isSlim() ? 'justify-center aspect-square' : 'w-full'
+            )}
+            variant="ghost"
+            size={isSlim() ? 'icon-sm' : 'sm'}
+            onClick={() => openSettings('Shortcuts')}
+          >
+            <KeyboardIcon class="size-4 shrink-0" />
+            <span class={cn(isSlim() ? 'sr-only' : 'block')}>Shortcuts</span>
+          </Button>
+        </div>
       </div>
     </>
   );
