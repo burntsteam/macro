@@ -1,4 +1,3 @@
-import KeyboardIcon from '@icon/regular/keyboard.svg';
 import GearIcon from '@phosphor-icons/core/regular/gear.svg?component-solid';
 import { type Component, createSignal, For, type JSX, Show } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
@@ -113,7 +112,7 @@ type AppSidebarProps = {
 
 export const AppSidebar = (props: AppSidebarProps) => {
   const layout = useSplitLayout();
-  const { toggleSettings, openSettings } = useSettingsState();
+  const { toggleSettings } = useSettingsState();
 
   const handleCommandPaletteClick = () => {
     CommandState.toggle();
@@ -308,6 +307,19 @@ export const AppSidebar = (props: AppSidebarProps) => {
         </Show>
 
         <div class="mt-auto w-full px-2">
+          {/*<Button
+            class={cn(
+              'flex items-center justify-start text-sm gap-2 cursor-default',
+              isSlim() ? 'justify-center aspect-square' : 'w-full'
+            )}
+            variant="ghost"
+            size={isSlim() ? 'icon-sm' : 'sm'}
+            onClick={() => openSettings('Shortcuts')}
+          >
+            <KeyboardIcon class="size-4 shrink-0" />
+            <span class={cn(isSlim() ? 'sr-only' : 'block')}>Shortcuts</span>
+          </Button>*/}
+
           <Tooltip
             class="w-full"
             tooltip={
@@ -330,19 +342,6 @@ export const AppSidebar = (props: AppSidebarProps) => {
               <span class={cn(isSlim() ? 'sr-only' : 'block')}>Settings</span>
             </Button>
           </Tooltip>
-
-          <Button
-            class={cn(
-              'flex items-center justify-start text-sm gap-2 cursor-default',
-              isSlim() ? 'justify-center aspect-square' : 'w-full'
-            )}
-            variant="ghost"
-            size={isSlim() ? 'icon-sm' : 'sm'}
-            onClick={() => openSettings('Shortcuts')}
-          >
-            <KeyboardIcon class="size-4 shrink-0" />
-            <span class={cn(isSlim() ? 'sr-only' : 'block')}>Shortcuts</span>
-          </Button>
         </div>
       </div>
     </>
