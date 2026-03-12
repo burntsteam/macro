@@ -45,6 +45,7 @@ import {
   makeAttachmentTrackerPersistenceKey,
   makeInputValuePersistenceKey,
 } from '@channel/Input/utils/persistence';
+import { createStickyScrollEffect } from './sticky-scroll';
 import { createMessageEditor } from './create-message-editor';
 import type { ChannelInputProps } from '@channel/Input/ChannelInput';
 
@@ -131,6 +132,12 @@ export function Channel(props: ChannelProps) {
     },
   });
 
+  createStickyScrollEffect({
+    isNearBottom: () => threadListScrollState()?.isNearBottom ?? false,
+    hasMoreBelow: () => threadPaginator.hasMoreShifting(),
+    messages,
+    scrollToBottom: () => threadListNavigation()?.scrollToBottom(),
+  });
   const onSend: ChannelInputProps['onSend'] = (snapshot) => {
     const senderId = userId();
     if (!senderId) return;
