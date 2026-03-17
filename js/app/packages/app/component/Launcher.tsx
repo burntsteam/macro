@@ -53,6 +53,7 @@ import { Dynamic } from 'solid-js/web';
 import { type FocusableElement, tabbable } from 'tabbable';
 import { useSplitLayout } from './split-layout/layout';
 import { cn } from '@ui/utils/classname';
+import type { ListViewCreateActionId } from './list-view-create';
 
 const createBlock = async (spec: {
   blockName: BlockName | BlockAlias;
@@ -127,6 +128,83 @@ const createComponent = async (spec: {
   );
 };
 
+export function runCreateAction(
+  actionId: ListViewCreateActionId,
+  options: { shouldInsert?: boolean } = {}
+) {
+  const shouldInsert = options.shouldInsert ?? false;
+
+  switch (actionId) {
+    case 'doc':
+      createBlock({
+        blockName: 'md',
+        loading: true,
+        createFn: () =>
+          createMarkdownFile({
+            title: '',
+            content: '',
+            projectId: undefined,
+          }),
+        shouldInsert,
+      });
+      return;
+    case 'canvas':
+      createBlock({
+        blockName: 'canvas',
+        loading: true,
+        createFn: async () => {
+          const result = await createCanvasFileFromJsonString({
+            json: JSON.stringify({ nodes: [], edges: [] }),
+            title: 'New Canvas',
+          });
+          if ('error' in result) return;
+          const [_, id] = ok(result.documentId);
+          return id;
+        },
+        shouldInsert,
+      });
+      return;
+    case 'task':
+      createComponent({
+        componentId: 'task-compose',
+        asPopover: true,
+      });
+      return;
+    case 'email':
+      createComponent({
+        componentId: 'email-compose',
+        shouldInsert,
+      });
+      return;
+    case 'message':
+      createComponent({
+        componentId: 'channel-compose',
+        shouldInsert,
+      });
+      return;
+    case 'agent':
+      createBlock({
+        blockName: 'chat',
+        createFn: async () => {
+          const result = await createChat();
+          if ('error' in result) {
+            return;
+          }
+          return result.chatId;
+        },
+        shouldInsert,
+      });
+      return;
+    case 'folder':
+      createBlock({
+        blockName: 'project',
+        createFn: () => createProject({ name: 'New Folder' }),
+        shouldInsert,
+      });
+      return;
+  }
+}
+
 type CreatableBlock = Omit<HotkeyRegistrationOptions, 'scopeId'> & {
   label: string;
   blockName: BlockName;
@@ -145,17 +223,7 @@ export const CREATABLE_BLOCKS: CreatableBlock[] = [
     altHotkeyToken: TOKENS.create.noteNewSplit,
     hotkey: 'd',
     keyDownHandler: () => {
-      createBlock({
-        blockName: 'md',
-        loading: true,
-        createFn: () =>
-          createMarkdownFile({
-            title: '',
-            content: '',
-            projectId: undefined,
-          }),
-        shouldInsert: pressedKeys().has('shift'),
-      });
+      runCreateAction('doc', { shouldInsert: pressedKeys().has('shift') });
       return true;
     },
   },
@@ -171,10 +239,7 @@ export const CREATABLE_BLOCKS: CreatableBlock[] = [
           altHotkeyToken: TOKENS.create.taskNewSplit,
           hotkey: 't' as const,
           keyDownHandler: () => {
-            createComponent({
-              componentId: 'task-compose',
-              asPopover: true,
-            });
+            runCreateAction('task');
             return true;
           },
         },
@@ -190,10 +255,7 @@ export const CREATABLE_BLOCKS: CreatableBlock[] = [
     altHotkeyToken: TOKENS.create.emailNewSplit,
     hotkey: 'e',
     keyDownHandler: () => {
-      createComponent({
-        componentId: 'email-compose',
-        shouldInsert: pressedKeys().has('shift'),
-      });
+      runCreateAction('email', { shouldInsert: pressedKeys().has('shift') });
       return true;
     },
   },
@@ -207,10 +269,7 @@ export const CREATABLE_BLOCKS: CreatableBlock[] = [
     altHotkeyToken: TOKENS.create.messageNewSplit,
     hotkey: 'm',
     keyDownHandler: () => {
-      createComponent({
-        componentId: 'channel-compose',
-        shouldInsert: pressedKeys().has('shift'),
-      });
+      runCreateAction('message', { shouldInsert: pressedKeys().has('shift') });
       return true;
     },
   },
@@ -224,17 +283,7 @@ export const CREATABLE_BLOCKS: CreatableBlock[] = [
     altHotkeyToken: TOKENS.create.chatNewSplit,
     hotkey: 'a',
     keyDownHandler: () => {
-      createBlock({
-        blockName: 'chat',
-        createFn: async () => {
-          const result = await createChat();
-          if ('error' in result) {
-            return;
-          }
-          return result.chatId;
-        },
-        shouldInsert: pressedKeys().has('shift'),
-      });
+      runCreateAction('agent', { shouldInsert: pressedKeys().has('shift') });
       return true;
     },
   },
@@ -248,18 +297,7 @@ export const CREATABLE_BLOCKS: CreatableBlock[] = [
     altHotkeyToken: TOKENS.create.canvasNewSplit,
     hotkey: 'n',
     keyDownHandler: () => {
-      createBlock({
-        blockName: 'canvas',
-        loading: true,
-        createFn: async () => {
-          const result = await createCanvasFileFromJsonString({
-            json: JSON.stringify({ nodes: [], edges: [] }),
-            title: 'New Canvas',
-          });
-          if ('error' in result) return;
-          const [_, id] = ok(result.documentId);
-          return id;
-        },
+      runCreateAction('canvas', {
         shouldInsert: pressedKeys().has('shift'),
       });
       return true;
@@ -275,11 +313,7 @@ export const CREATABLE_BLOCKS: CreatableBlock[] = [
     altHotkeyToken: TOKENS.create.projectNewSplit,
     hotkey: 'f',
     keyDownHandler: () => {
-      createBlock({
-        blockName: 'project',
-        createFn: () => createProject({ name: 'New Folder' }),
-        shouldInsert: pressedKeys().has('shift'),
-      });
+      runCreateAction('folder', { shouldInsert: pressedKeys().has('shift') });
       return true;
     },
   },
