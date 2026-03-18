@@ -13,25 +13,26 @@ use macro_middleware::auth::internal_access::InternalApiSecretKey;
 use native_app_service::{domain::service::NativeAppServiceImpl, outbound::DefaultBundleFetcher};
 use notification::domain::service::SqsNotificationIngress;
 use notification::outbound::queue::SqsIngressQueue;
+use referral::{
+    domain::service::ReferralServiceImpl,
+    outbound::{pg_referral_repo::PgReferralRepo, stripe_discount_client::StripeDiscountClient},
+};
 use remote_env_var::LocalOrRemoteSecret;
 use roles_and_permissions::{
     domain::service::UserRolesAndPermissionsServiceImpl, outbound::pgpool::MacroDB,
 };
 use sqlx::PgPool;
-use teams::{
-    domain::team_service::TeamServiceImpl, outbound::customer_repo::CustomerRepositoryImpl,
-    outbound::team_repo::TeamRepositoryImpl,
-};
 
 pub(crate) type NotificationIngressType = SqsNotificationIngress<SqsIngressQueue>;
 
-#[expect(dead_code, reason = "used by utoipa in swagger.rs")]
 pub(crate) type TeamsServiceType = teams::domain::team_service::TeamServiceImpl<
     teams::outbound::team_repo::TeamRepositoryImpl,
     teams::outbound::customer_repo::CustomerRepositoryImpl,
     UserRolesAndPermissionsServiceImpl<MacroDB, MacroDB>,
     NotificationIngressType,
 >;
+
+pub(crate) type ReferralServiceType = ReferralServiceImpl<PgReferralRepo, StripeDiscountClient>;
 
 pub(crate) type GithubLinkServiceType =
     GithubLinkServiceImpl<PgGithubRepo, GithubOauthImpl, GithubAuthImpl>;
@@ -55,15 +56,9 @@ pub(crate) struct ApiContext {
     pub stripe_webhook_secret: LocalOrRemoteSecret<StripeWebhookSecretKey>,
     pub user_roles_and_permissions_service:
         Arc<UserRolesAndPermissionsServiceImpl<MacroDB, MacroDB>>, // Note: since FromRef doesn't support generics we have to specify the concrete types here
-    pub teams_service: Arc<
-        TeamServiceImpl<
-            TeamRepositoryImpl,
-            CustomerRepositoryImpl,
-            UserRolesAndPermissionsServiceImpl<MacroDB, MacroDB>,
-            NotificationIngressType,
-        >,
-    >,
+    pub teams_service: Arc<TeamsServiceType>,
     pub native_app_service: Arc<NativeAppServiceImpl<DefaultBundleFetcher>>,
+    pub referral_service: Arc<ReferralServiceType>,
 }
 
 env_var! {
