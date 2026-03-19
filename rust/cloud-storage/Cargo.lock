@@ -617,6 +617,7 @@ dependencies = [
  "notification",
  "openssl",
  "rand 0.9.0",
+ "rate_limit",
  "redis",
  "referral",
  "remote_env_var",
@@ -6177,6 +6178,7 @@ dependencies = [
  "models_pagination",
  "notification",
  "paste",
+ "referral_invitation",
  "rootcause",
  "serde",
  "serde_json",
@@ -6555,6 +6557,7 @@ dependencies = [
  "model-error-response",
  "model_user",
  "models_pagination",
+ "rate_limit",
  "redis",
  "reqwest",
  "rootcause",
@@ -6607,6 +6610,7 @@ dependencies = [
  "model_notifications",
  "models_pagination",
  "notification",
+ "rate_limit",
  "redis",
  "rootcause",
  "serde",
@@ -6656,6 +6660,7 @@ dependencies = [
  "notification",
  "notification_db_client",
  "paste",
+ "rate_limit",
  "redis",
  "regex",
  "secretsmanager_client",
@@ -7763,6 +7768,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "rate_limit"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "redis",
+ "rootcause",
+ "serde",
+ "thiserror 2.0.17",
+ "tokio",
+ "tracing",
+ "twox-hash",
+ "uuid",
+]
+
+[[package]]
 name = "rav1e"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7910,8 +7930,13 @@ dependencies = [
  "macro_user_id",
  "macro_uuid",
  "mockall",
+ "model-entity",
  "model-error-response",
  "model_user",
+ "notification",
+ "rate_limit",
+ "referral_invitation",
+ "rootcause",
  "serde",
  "serde_json",
  "sqlx",
@@ -7922,6 +7947,15 @@ dependencies = [
  "urlencoding",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "referral_invitation"
+version = "0.1.0"
+dependencies = [
+ "macro_user_id",
+ "notification",
+ "serde",
 ]
 
 [[package]]
@@ -10347,6 +10381,15 @@ dependencies = [
  "sha1",
  "thiserror 2.0.17",
  "utf-8",
+]
+
+[[package]]
+name = "twox-hash"
+version = "2.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ea3136b675547379c4bd395ca6b938e5ad3c3d20fad76e7fe85f9e0d011419c"
+dependencies = [
+ "rand 0.9.0",
 ]
 
 [[package]]
