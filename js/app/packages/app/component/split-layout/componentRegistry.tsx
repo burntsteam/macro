@@ -236,6 +236,12 @@ registerComponent(
 );
 registerComponent('settings', () => <SettingsPanelComponentWrapper />);
 registerComponent('notification', () => <NotificationRoute />);
+registerComponent(
+  'welcome',
+  lazy(
+    () => import('@app/component/interactive-onboarding/InteractiveOnboarding')
+  )
+);
 
 if (LOCAL_ONLY) {
   registerComponent(

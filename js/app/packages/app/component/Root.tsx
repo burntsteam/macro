@@ -73,7 +73,12 @@ import MacroJump from './MacroJump';
 import Onboarding from './Onboarding';
 import { ReactiveFavicon } from './ReactiveFavicon';
 import { SuspenseContextComp } from './SuspenseContext';
+import { lazy } from 'solid-js';
 import { LAYOUT_ROUTE } from './split-layout/SplitLayoutRoute';
+
+const InteractiveOnboarding = lazy(
+  () => import('./interactive-onboarding/InteractiveOnboarding')
+);
 import Visor from './Visor';
 import { QuickAccessProvider } from '@core/context/quickAccess';
 import { AnalyticsContextProvider } from '@app/component/analytics-context';
@@ -288,6 +293,14 @@ const ROUTES: RouteDefinition[] = [
     component: () => (
       <div class="flex *:flex-1 w-full h-dvh overflow-y-hidden">
         <Onboarding />
+      </div>
+    ),
+  },
+  {
+    path: '/welcome',
+    component: () => (
+      <div class="flex *:flex-1 w-full h-dvh overflow-y-hidden">
+        <InteractiveOnboarding />
       </div>
     ),
   },
