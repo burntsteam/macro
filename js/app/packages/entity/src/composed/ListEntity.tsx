@@ -239,10 +239,10 @@ function ChannelMessage(props: {
   const hasContent = () => Boolean(props.message.content?.trim());
   return (
     <>
-      <span class="font-semibold truncate min-w-min max-w-1/3">
+      <span class="ph-no-capture font-semibold truncate min-w-min max-w-1/3">
         <DisplayName id={props.message.senderId} format="firstName" />
       </span>
-      <span class="text-ink/50 font-medium truncate inline-flex items-center shrink">
+      <span class="ph-no-capture text-ink/50 font-medium truncate inline-flex items-center shrink">
         <Show
           when={hasContent()}
           fallback={<span class="italic">Attached Items</span>}
@@ -283,7 +283,7 @@ function NarrowLayout(props: LayoutProps) {
 
       <Entity.Slot
         placement="title"
-        class="flex items-center gap-2 truncate font-semibold"
+        class="ph-no-capture flex items-center gap-2 truncate font-semibold"
       >
         <Show when={props.unread}>
           <UnreadIndicator active />
@@ -399,7 +399,7 @@ function NarrowInboxLayout(props: LayoutProps) {
 
       <Entity.Slot
         placement="title"
-        class="flex items-center gap-2 truncate font-semibold pt-3"
+        class="ph-no-capture flex items-center gap-2 truncate font-semibold pt-3"
       >
         <Show
           when={isEmailEntity(props.entity) && props.entity}
@@ -539,7 +539,7 @@ function WideLayout(props: LayoutProps) {
       </Entity.Slot>
       <Entity.Slot
         placement="content"
-        class="font-semibold truncate items-center gap-2 flex"
+        class="ph-no-capture font-semibold truncate items-center gap-2 flex"
       >
         <div class="size-4 shrink-0">
           <Entity.Icon entity={props.entity} streamState={props.streamState} />
@@ -587,7 +587,7 @@ function WideLayout(props: LayoutProps) {
       <Entity.Slot placement="meta" class="flex items-center gap-2">
         <Show when={isProjectContainedEntity(props.entity) && props.entity}>
           {(entity) => (
-            <span class="text-ink-extra-muted text-xs">
+            <span class="ph-no-capture text-ink-extra-muted text-xs">
               <ProjectBreadCrumb
                 entity={entity()}
                 onClick={props.onProjectClick}
