@@ -106,16 +106,18 @@ export const useApplyPreset = () => {
     });
   };
 
-  const applyTabPreset = (view: ListView, tabId: string) => {
+  const applyTabPreset = (view: ListView, tabId: string): boolean => {
     const config = VIEW_TAB_PRESETS[view];
+    if (!config) return false;
     const resolver = config.tabs[tabId];
-    if (!resolver) return;
+    if (!resolver) return false;
 
     const resolved = resolver(getPresetContext());
-    if (!resolved) return;
+    if (!resolved) return false;
 
     setActiveTab(tabId);
     applyPreset(resolved);
+    return true;
   };
 
   return { applyTabPreset };

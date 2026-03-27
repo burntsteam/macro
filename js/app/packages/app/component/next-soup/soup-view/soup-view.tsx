@@ -148,6 +148,7 @@ const useSoupNotificationInvalidators = () => {
 };
 
 type PersistedSoupViewState = {
+  version?: number;
   activeTab: string | undefined;
   filters: { and: string[]; or: string[] };
   queryFilters: SoupItemsQueryFilters;
@@ -155,6 +156,8 @@ type PersistedSoupViewState = {
   previewEntity: string | undefined;
   assigneeFilter: string[];
 };
+
+const PERSISTED_STATE_VERSION = 1;
 
 // Tracks how many SoupViewList instances are mounted per contentId.
 // Used to detect duplicate splits showing the same view.
@@ -653,11 +656,26 @@ export const SoupViewList = (props: SoupViewListProps) => {
   // Set initial state
   onMount(() => {
     if (initialPersistedState) {
+      const isStale =
+        (initialPersistedState.version ?? 0) < PERSISTED_STATE_VERSION;
+      const applied =
+        isStale &&
+        isListViewID(contentId) &&
+        initialPersistedState.activeTab &&
+        applyTabPreset(contentId, initialPersistedState.activeTab);
+      if (!applied) {
+        batch(() => {
+          soup.filters.set(
+            isStale
+              ? (props.initialClientFilters ?? { and: [], or: [] })
+              : (initialPersistedState.filters ?? { and: [], or: [] })
+          );
+          setQueryFilters(initialPersistedState.queryFilters ?? {});
+          setActiveTab(initialPersistedState.activeTab);
+        });
+      }
       batch(() => {
-        soup.filters.set(initialPersistedState.filters ?? { and: [], or: [] });
-        setQueryFilters(initialPersistedState.queryFilters ?? {});
         soup.sort.setAll(initialPersistedState.sort ?? []);
-        setActiveTab(initialPersistedState.activeTab);
         setAssigneeFilter(initialPersistedState.assigneeFilter ?? []);
       });
     } else {
@@ -671,6 +689,7 @@ export const SoupViewList = (props: SoupViewListProps) => {
     on(
       () =>
         ({
+          version: PERSISTED_STATE_VERSION,
           activeTab: activeTab(),
           filters: {
             and: soup.filters.andFilters().map((f) => f.id),
