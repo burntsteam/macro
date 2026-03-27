@@ -22,6 +22,8 @@ pub mod join_team;
 pub mod middleware;
 /// Update a team.
 pub mod patch_team;
+/// Patch a team users tier.
+pub mod patch_team_user_tier;
 /// Reinvite a user to a team.
 pub mod reinvite_to_team;
 /// Reject a team invitation.
@@ -85,6 +87,7 @@ where
         .route("/user/invites", get(get_user_invites::handler::<T>))
         .route("/{team_id}", get(get_team::handler::<T>))
         .route("/{team_id}", patch(patch_team::handler::<T>))
+        .route("/{team_id}/tier", patch(patch_team_user_tier::handler::<T>))
         .route("/{team_id}", delete(delete_team::handler::<T>))
         .route("/{team_id}/invites", get(get_team_invites::handler::<T>))
         .route("/{team_id}/invite", post(invite_to_team::handler::<T>))
@@ -118,10 +121,23 @@ impl IntoResponse for TeamError {
                     message: "team does not exist".into(),
                 }),
             ),
+            TeamError::TeamMemberNotFound(_) => (
+                StatusCode::NOT_FOUND,
+                Json(ErrorResponse {
+                    message: self.to_string().into(),
+                }),
+            ),
+
             TeamError::TeamInviteDoesNotExist => (
                 StatusCode::NOT_FOUND,
                 Json(ErrorResponse {
                     message: "team invite does not exist".into(),
+                }),
+            ),
+            TeamError::BadRequest(_) => (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    message: self.to_string().into(),
                 }),
             ),
             _ => (

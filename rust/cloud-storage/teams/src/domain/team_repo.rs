@@ -6,7 +6,7 @@ use macro_user_id::{email::Email, lowercased::Lowercase, user_id::MacroUserIdStr
 
 use crate::domain::model::{
     CreateTeamError, DeleteTeamError, InviteUsersToTeamError, JoinTeamError, PatchTeamRequest,
-    ReinviteError, RemoveTeamInviteError, RemoveUserFromTeamError,
+    PatchTeamUserTierRequest, ReinviteError, RemoveTeamInviteError, RemoveUserFromTeamError,
     RestorePermissionsForTeamMembersError, RevokePermissionsForTeamMembersError, Team, TeamError,
     TeamInvite, TeamInviteDetails, TeamMember, TeamRole, TeamUserTier, TeamWithMembers,
 };
@@ -112,14 +112,6 @@ pub trait TeamRepository: Clone + Send + Sync + 'static {
         user_id: &MacroUserIdStr<'_>,
     ) -> impl Future<Output = Result<bool, TeamError>> + Send;
 
-    /// Gets the set of tiers a user has across all their teams,
-    /// excluding a specific team.
-    fn get_user_remaining_tiers(
-        &self,
-        user_id: &MacroUserIdStr<'_>,
-        exclude_team_id: &uuid::Uuid,
-    ) -> impl Future<Output = Result<HashSet<TeamUserTier>, TeamError>> + Send;
-
     /// Gets the members of the team.
     /// This does not include the team owner.
     fn get_team_members(
@@ -191,6 +183,21 @@ pub trait TeamRepository: Clone + Send + Sync + 'static {
         team_id: &uuid::Uuid,
         user_id: &MacroUserIdStr<'_>,
     ) -> impl Future<Output = Result<Option<TeamRole>, TeamError>> + Send;
+
+    /// Gets the team member for the team
+    fn get_team_member(
+        &self,
+        team_id: &uuid::Uuid,
+        user_id: &MacroUserIdStr<'_>,
+    ) -> impl Future<Output = Result<TeamMember<'_>, TeamError>> + Send;
+
+    /// Patches the tier of the provided user id for the team
+    fn patch_team_tier(
+        &self,
+        team_id: &uuid::Uuid,
+        user_id: &MacroUserIdStr<'_>,
+        team_tier: TeamUserTier,
+    ) -> impl Future<Output = Result<(), TeamError>> + Send;
 }
 
 /// The TeamService defines a set of actions to perform on the teams
@@ -312,4 +319,11 @@ pub trait TeamService: Clone + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<HashSet<roles_and_permissions::domain::model::PermissionId>, TeamError>,
     > + Send;
+
+    /// Patches the team users tier and updates the stripe subscription accordingly
+    fn patch_team_user_tier(
+        &self,
+        team_id: &uuid::Uuid,
+        request: &PatchTeamUserTierRequest,
+    ) -> impl Future<Output = Result<(), TeamError>> + Send;
 }
