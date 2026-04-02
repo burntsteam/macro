@@ -229,14 +229,12 @@ async fn main() -> anyhow::Result<()> {
         EmailPgRepo::new(db.clone()),
         frecency_service.clone(),
         email::domain::ports::NoOpEnqueuer,
-        email::domain::ports::NoOpGmailLabelModifier,
         0,
     );
     let readonly_email_service = ReadonlyEmailPreviewAdapter(EmailServiceImpl::new(
         EmailPgRepo::new(readonly_db.clone()),
         frecency_service.clone(),
         email::domain::ports::NoOpEnqueuer,
-        email::domain::ports::NoOpGmailLabelModifier,
         0,
     ));
     let system_properties_service =
