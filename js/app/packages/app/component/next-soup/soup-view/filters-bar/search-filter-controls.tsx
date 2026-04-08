@@ -1,5 +1,6 @@
 import XIcon from '@icon/regular/x.svg';
 import { EntityIcon } from '@core/component/EntityIcon';
+import { EntityIcon as EntityIconWithAvatar } from '@entity/extractors/entity-icon';
 import { UserIcon } from '@core/component/UserIcon';
 import { useQuickAccess } from '@core/context/quickAccess';
 import { useUserId } from '@core/context/user';
@@ -139,7 +140,9 @@ const InChannelFilter = () => {
         value: ch.id,
         label: ch.data.name,
         icon: () => (
-          <EntityIcon targetType={ch.data.channelType || 'channel'} size="xs" />
+          <div class="size-4">
+            <EntityIconWithAvatar entity={ch.data} />
+          </div>
         ),
       }))
   );
