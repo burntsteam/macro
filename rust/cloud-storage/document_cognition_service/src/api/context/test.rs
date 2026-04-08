@@ -240,13 +240,15 @@ pub async fn test_api_context(pool: sqlx::Pool<sqlx::Postgres>) -> std::sync::Ar
         ai_tools::NoOpTaskProperties,
         ai_tools::NoOpConnectionService,
     );
-    let entity_access_service = entity_access::domain::service::EntityAccessServiceImpl::new(
-        entity_access::outbound::PgAccessRepository::new(pool.clone()),
+    let entity_access_service = Arc::new(
+        entity_access::domain::service::EntityAccessServiceImpl::new(
+            entity_access::outbound::PgAccessRepository::new(pool.clone()),
+        ),
     );
     let test_lexical_client = LexicalClient::new("test".into(), "http://nofileshere".into());
     let document_tool_context = documents::inbound::toolset::DocumentToolContext::new(
         document_service,
-        entity_access_service,
+        (*entity_access_service).clone(),
         test_lexical_client,
     );
 
@@ -256,7 +258,10 @@ pub async fn test_api_context(pool: sqlx::Pool<sqlx::Postgres>) -> std::sync::Ar
     // Build properties tool context
     let properties_service = properties::PropertiesServiceImpl::new(
         properties::PropertiesPgRepo::new(pool.clone()),
-        Some(properties::PermissionServiceImpl::new(pool.clone())),
+        Some(properties::PermissionServiceImpl::new(
+            pool.clone(),
+            entity_access_service.clone(),
+        )),
         Some(ai_tools::NoOpNotificationService),
     );
     let properties_tool_context =
@@ -272,11 +277,7 @@ pub async fn test_api_context(pool: sqlx::Pool<sqlx::Postgres>) -> std::sync::Ar
             0,
         )),
         Arc::new(email::domain::ports::NoOpGmailTokenProvider),
-        Arc::new(
-            entity_access::domain::service::EntityAccessServiceImpl::new(
-                entity_access::outbound::PgAccessRepository::new(pool.clone()),
-            ),
-        ),
+        entity_access_service.clone(),
     );
 
     let tool_service_context = ai_tools::ToolServiceContext {
@@ -324,6 +325,7 @@ pub async fn test_api_context(pool: sqlx::Pool<sqlx::Postgres>) -> std::sync::Ar
         tool_service_context,
         all_tools: all_tools_toolset,
         all_tools_prompt,
+        entity_access_service,
     };
     Arc::new(api_context)
 }
