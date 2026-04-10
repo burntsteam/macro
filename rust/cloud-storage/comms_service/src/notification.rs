@@ -1,6 +1,6 @@
 use crate::api::context::AppState;
 use comms_db_client::{
-    messages::get_count::check_if_channel_has_messages,
+    messages::get_count::get_channel_message_count,
     messages::get_message_owner::get_message_owner,
     model::{Message, SimpleMention},
     participants::get_participants::get_channel_participants_for_thread_id,
@@ -161,8 +161,11 @@ impl ChannelMessageEvent<'_> {
                     tracing::warn!("thread participants is empty, but message has thread id");
                 }
             }
-            // Channel has no messages, send invite notification
-            (0, None) => {
+            // First message in the channel — send an invite notification.
+            // The count is 1 (not 0) because our message was already persisted
+            // before this notification task runs; 0 shouldn't happen in
+            // practice but is handled defensively.
+            (..=1, None) => {
                 dispatch_notifications_for_invite(
                     ingress,
                     self.channel_id,
@@ -260,13 +263,16 @@ pub async fn dispatch_notifications_for_message(
     message: Message,
     mentions: Vec<SimpleMention>,
 ) -> anyhow::Result<()> {
+    // The message is already persisted before this task runs, so the row
+    // count includes the message we just created — the first message in a
+    // channel yields a count of 1 (not 0).
     let channel_message_count =
-        check_if_channel_has_messages(&api_context.db, channel_id).await? as usize;
+        get_channel_message_count(&api_context.db, channel_id).await? as usize;
 
     // When this is the first message in the channel, look up which
     // participants already have accounts so the invite branch can split
     // push (existing) vs email (non-existing) delivery.
-    let existing_user_ids: HashSet<String> = if channel_message_count == 0
+    let existing_user_ids: HashSet<String> = if channel_message_count <= 1
         && message.thread_id.is_none()
     {
         let participant_ids: Vec<_> = participants.iter().map(|p| p.user_id.0.clone()).collect();
