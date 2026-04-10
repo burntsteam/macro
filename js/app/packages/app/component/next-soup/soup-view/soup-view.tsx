@@ -107,6 +107,7 @@ import {
 import { Button } from '@app/component/next-soup/soup-view/filters-bar/button';
 import { LabelAndHotKey, Tooltip } from '@core/component/Tooltip';
 import SearchIcon from '@macro-icons/macro-magnifying-glass.svg';
+import { QUERY_FILTERS } from '../filters/query-filters';
 
 const useSoupNotificationInvalidators = () => {
   const notificationSource = useGlobalNotificationSource();
@@ -168,7 +169,7 @@ type PersistedSoupViewState = {
   assigneeFilter: string[];
 };
 
-const PERSISTED_STATE_VERSION = 1;
+const PERSISTED_STATE_VERSION = 2;
 
 // Tracks how many SoupViewList instances are mounted per contentId.
 // Used to detect duplicate splits showing the same view.
@@ -675,7 +676,11 @@ export const SoupViewList = (props: SoupViewListProps) => {
               ? (props.initialClientFilters ?? { and: [], or: [] })
               : (initialPersistedState.filters ?? { and: [], or: [] })
           );
-          setQueryFilters(initialPersistedState.queryFilters ?? {});
+          setQueryFilters(
+            isStale
+              ? QUERY_FILTERS.default
+              : (initialPersistedState.queryFilters ?? QUERY_FILTERS.default)
+          );
           setActiveTab(initialPersistedState.activeTab);
         });
       }
