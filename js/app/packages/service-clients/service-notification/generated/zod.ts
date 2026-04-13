@@ -115,6 +115,7 @@ export const listTypedNotificationsResponse = zod
                 'project',
                 'email_thread',
                 'team',
+                'call',
               ])
               .describe('The type of an entity in Macro'),
           })
@@ -546,6 +547,7 @@ export const bulkGetTypedNotificationsByEventItemIdsResponse = zod
                 'project',
                 'email_thread',
                 'team',
+                'call',
               ])
               .describe('The type of an entity in Macro'),
           })
@@ -971,6 +973,7 @@ export const getTypedNotificationsByEventItemIdResponse = zod
                 'project',
                 'email_thread',
                 'team',
+                'call',
               ])
               .describe('The type of an entity in Macro'),
           })
@@ -1407,6 +1410,7 @@ export const getTypedNotificationByIdResponse = zod
         'project',
         'email_thread',
         'team',
+        'call',
       ])
       .describe('The type of an entity in Macro'),
   })
