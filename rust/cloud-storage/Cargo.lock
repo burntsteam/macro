@@ -1741,12 +1741,14 @@ name = "call"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aws-sdk-s3",
  "axum",
  "chrono",
  "connection",
  "entity_access",
  "livekit-api",
  "livekit-protocol",
+ "macro_aws_config",
  "macro_db_migrator",
  "macro_user_id",
  "mockall",

@@ -5888,6 +5888,10 @@
             },
             "description": "Participants (both active and historic)."
           },
+          "recordingUrl": {
+            "type": ["string", "null"],
+            "description": "Presigned URL for the call recording, if available."
+          },
           "roomName": {
             "type": "string",
             "description": "The RTC room name."

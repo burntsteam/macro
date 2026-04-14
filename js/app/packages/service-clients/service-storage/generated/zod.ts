@@ -863,6 +863,10 @@ export const getCallRecordResponse = zod
           )
       )
       .describe('Participants (both active and historic).'),
+    recordingUrl: zod
+      .string()
+      .nullish()
+      .describe('Presigned URL for the call recording, if available.'),
     roomName: zod.string().describe('The RTC room name.'),
     startedAt: zod
       .string()
