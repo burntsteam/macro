@@ -3,7 +3,9 @@
 use std::fmt;
 
 use chrono::{DateTime, Utc};
+use item_filters::ast::{LiteralTree, call::CallLiteral};
 use macro_user_id::user_id::MacroUserIdStr;
+use models_pagination::{Query, SimpleSortMethod};
 use uuid::Uuid;
 
 /// Represents an active call in a channel.
@@ -196,12 +198,25 @@ pub struct CallRecord {
     pub recording_key: Option<String>,
     /// Presigned URL for the call recording, if available.
     pub recording_url: Option<String>,
+    /// Resolved display name for the channel.
+    pub channel_name: Option<String>,
     /// Whether the call is currently active (from `calls` table).
     pub is_active: bool,
     /// Participants (both active and historic).
     pub participants: Vec<CallRecordParticipant>,
     /// Transcript segments ordered by `sequence_num`.
     pub transcript: Vec<CallRecordTranscriptSegment>,
+}
+
+/// Request to fetch recent call records for a user (used by Soup).
+#[derive(Debug)]
+pub struct GetCallRecordsRequest {
+    /// The user whose call records to fetch.
+    pub user_id: MacroUserIdStr<'static>,
+    /// Maximum number of records to return.
+    pub limit: u32,
+    /// Sort or cursor-based pagination query with optional filter.
+    pub query: Query<Uuid, SimpleSortMethod, LiteralTree<CallLiteral>>,
 }
 
 /// Errors that can occur during call operations.

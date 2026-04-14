@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT user_id\n        FROM call_record_participants\n        WHERE call_record_id = $1\n        ORDER BY joined_at ASC\n        ",
+  "query": "\n                SELECT user_id\n                FROM comms_channel_participants\n                WHERE channel_id = $1 AND left_at IS NULL\n                ",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "5764bc7a77e72625b9f348045d6ee0a3f1c0e1e6b81c50118f20fc7e6881eb9d"
+  "hash": "80ec8203f3090c1d40c0c782808e4a2bfbc92a06c2c37ab8a8e243f54eb93d03"
 }

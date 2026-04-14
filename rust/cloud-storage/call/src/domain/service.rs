@@ -21,9 +21,11 @@ use uuid::Uuid;
 
 use super::models::{
     CallActiveResponse, CallError, CallRecord, CallTokenResponse, EgressS3Config,
-    LeaveCallResponse, TranscriptSegmentRequest,
+    GetCallRecordsRequest, LeaveCallResponse, TranscriptSegmentRequest,
 };
-use super::ports::{CallRepository, CallRtcClient, CallService, RecordingStorage};
+use super::ports::{
+    CallRecordQueryService, CallRepository, CallRtcClient, CallService, RecordingStorage,
+};
 
 /// The concrete call service implementation.
 pub struct CallServiceImpl<
@@ -600,6 +602,10 @@ impl<
         let call_id = Uuid::parse_str(&entity.entity_id)
             .map_err(|_| CallError::Internal(anyhow::anyhow!("invalid call_id in receipt")))?;
 
+        let user_id = receipt
+            .get_authenticated_user()
+            .map_err(|_| CallError::Auth)?;
+
         let mut record = self
             .repo
             .get_call_record_by_call_id(&call_id)
@@ -615,6 +621,12 @@ impl<
                 .inspect_err(|e| tracing::error!(error=?e, "failed to presign recording URL"))
                 .ok();
         }
+
+        record.channel_name = self
+            .repo
+            .resolve_channel_name(&record.channel_id, user_id.copied())
+            .await
+            .map_err(|e| CallError::Internal(e.into()))?;
 
         Ok(record)
     }
@@ -655,4 +667,32 @@ fn extract_recording_key(file_url: &str) -> &str {
         .find("calls/")
         .map(|idx| &file_url[idx + "calls/".len()..])
         .unwrap_or(file_url)
+}
+
+/// Lightweight implementation of [`CallRecordQueryService`] for read-only
+/// call record queries. Unlike [`CallServiceImpl`], this only requires a
+/// repository — no RTC client, notifications, or entity access.
+pub struct CallRecordQueryServiceImpl<R: CallRepository> {
+    repo: R,
+}
+
+impl<R: CallRepository> CallRecordQueryServiceImpl<R> {
+    /// Create a new query service with the given repository.
+    pub fn new(repo: R) -> Self {
+        Self { repo }
+    }
+}
+
+impl<R: CallRepository> CallRecordQueryService for CallRecordQueryServiceImpl<R> {
+    #[tracing::instrument(err, skip(self))]
+    async fn get_user_call_records(
+        &self,
+        req: GetCallRecordsRequest,
+    ) -> Result<Vec<CallRecord>, CallError> {
+        let filter = req.query.filter();
+        self.repo
+            .get_call_records_by_user(req.user_id.copied(), req.limit, filter)
+            .await
+            .map_err(|e| CallError::Internal(e.into()))
+    }
 }
