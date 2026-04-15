@@ -67,6 +67,8 @@ const database = new aws.rds.Instance(
     username: 'macrouser',
     password,
     kmsKeyId: config.require('kms_key_id'),
+    monitoringInterval: config.requireNumber('monitoring_interval'),
+    monitoringRoleArn: config.require('rds_monitoring_role_arn'),
     performanceInsightsEnabled: true,
     performanceInsightsRetentionPeriod: config.requireNumber(
       'performance_insights_retention_days'
