@@ -3,10 +3,7 @@ import {
   type PresetContext,
 } from '@app/component/app-sidebar/soup-filter-presets';
 import type { FilterID } from '@app/component/next-soup/filters/configs';
-import {
-  NIL_UUID,
-  QUERY_FILTERS,
-} from '@app/component/next-soup/filters/query-filters';
+import { NIL_UUID } from '@app/component/next-soup/filters/query-filters';
 import { NO_ASSIGNEE } from '@app/component/next-soup/soup-view/task-sub-filter-matcher';
 import { useSoupView } from '@app/component/next-soup/soup-view/soup-view-context';
 import { useSplitPanelOrThrow } from '@app/component/split-layout/layoutUtils';
@@ -19,6 +16,10 @@ import { useContacts } from '@queries/contacts/contacts';
 import { batch, createMemo } from 'solid-js';
 import type { ActiveFilter } from './active-filter-chips';
 import { INDEX_OPTIONS } from './search-operator-autocomplete';
+import {
+  useSearchFilterOptions,
+  useSearchIndexController,
+} from './search-filter-controls';
 import {
   buildContactLabel,
   VIEW_FILTER_CATEGORIES,
@@ -57,6 +58,8 @@ export function useFilterRefinements() {
   const contacts = useContacts();
   const currentUserId = useUserId();
   const quickAccess = useQuickAccess();
+  const { channelOptions, senderOptions } = useSearchFilterOptions();
+  const { changeIndex } = useSearchIndexController();
 
   const getPresetContext = (): PresetContext => ({
     userId: user.userId(),
@@ -175,15 +178,14 @@ export function useFilterRefinements() {
         continue;
       }
       filters.push({
-        categoryLabel: 'Index',
+        categoryLabel: 'Type',
         optionId: option.id,
         optionLabel: option.label,
         icon: option.icon,
         categoryOptions: INDEX_OPTIONS as ActiveFilter['categoryOptions'],
-        onRemove: () => {
-          soup.filters.toggle({ or: [optionId] });
-          setQueryFilters(QUERY_FILTERS.default);
-        },
+        multiple: false,
+        onRemove: () => changeIndex('all'),
+        onReplace: (newOptionId) => changeIndex(newOptionId),
       });
     }
 
@@ -200,58 +202,104 @@ export function useFilterRefinements() {
       });
     }
 
+    const labelForIds = (ids: string[]): string => {
+      const [first, ...rest] = ids;
+      const firstItem = quickAccess.getById(first);
+      const firstLabel =
+        firstItem && 'data' in firstItem && firstItem.data?.name
+          ? firstItem.data.name
+          : first;
+      if (rest.length === 0) return firstLabel;
+      return `${firstLabel} and ${rest.length} ${rest.length === 1 ? 'other' : 'others'}`;
+    };
+
     // Search operator filters: in: (channel_ids)
     const channelIds = (
       queryFilters().channel_filters?.channel_ids ?? []
     ).filter((id) => id !== NIL_UUID);
-    for (const channelId of channelIds) {
-      const item = quickAccess.getById(channelId);
-      const label =
-        item && 'data' in item && item.data?.name ? item.data.name : channelId;
+    const setChannelIds = (ids: string[]) =>
+      setQueryFilters((prev) => ({
+        ...prev,
+        channel_filters: {
+          ...prev.channel_filters,
+          channel_ids: ids.length > 0 ? ids : undefined,
+        },
+      }));
+    if (channelIds.length > 0) {
       filters.push({
         categoryLabel: 'In',
-        optionId: `in:${channelId}`,
-        optionLabel: label,
-        onRemove: () =>
-          setQueryFilters((prev) => {
-            const ids = (prev.channel_filters?.channel_ids ?? []).filter(
-              (id) => id !== channelId
-            );
-            return {
-              ...prev,
-              channel_filters: {
-                ...prev.channel_filters,
-                channel_ids: ids.length > 0 ? ids : undefined,
-              },
-            };
-          }),
+        optionId: `in:${channelIds.join(',')}`,
+        optionLabel: labelForIds(channelIds),
+        searchableOptions: channelOptions,
+        activeSearchableIds: () =>
+          (queryFilters().channel_filters?.channel_ids ?? []).filter(
+            (id) => id !== NIL_UUID
+          ),
+        onSearchableChange: setChannelIds,
+        searchPlaceholder: 'Search channels...',
+        onRemove: () => setChannelIds([]),
       });
     }
 
     // Search operator filters: from: (sender_ids)
     const senderIds = queryFilters().channel_filters?.sender_ids ?? [];
-    for (const senderId of senderIds) {
-      const item = quickAccess.getById(senderId);
-      const label =
-        item && 'data' in item && item.data?.name ? item.data.name : senderId;
+    const setSenderIds = (ids: string[]) =>
+      setQueryFilters((prev) => ({
+        ...prev,
+        channel_filters: {
+          ...prev.channel_filters,
+          sender_ids: ids.length > 0 ? ids : undefined,
+        },
+      }));
+    if (senderIds.length > 0) {
       filters.push({
         categoryLabel: 'From',
-        optionId: `from:${senderId}`,
-        optionLabel: label,
-        onRemove: () =>
-          setQueryFilters((prev) => {
-            const ids = (prev.channel_filters?.sender_ids ?? []).filter(
-              (id) => id !== senderId
-            );
-            return {
-              ...prev,
-              channel_filters: {
-                ...prev.channel_filters,
-                sender_ids: ids.length > 0 ? ids : undefined,
-              },
-            };
-          }),
+        optionId: `from:${senderIds.join(',')}`,
+        optionLabel: labelForIds(senderIds),
+        searchableOptions: senderOptions,
+        activeSearchableIds: () =>
+          queryFilters().channel_filters?.sender_ids ?? [],
+        onSearchableChange: setSenderIds,
+        searchPlaceholder: 'Search senders...',
+        onRemove: () => setSenderIds([]),
       });
+    }
+
+    // Email importance (only when the email index is active in the search view
+    // and the user has explicitly set a value — undefined means "All", no chip)
+    if (currentView() === 'search' && soup.filters.isActive('email')) {
+      const importance = queryFilters().email_filters?.importance;
+      if (importance !== undefined) {
+        const IMPORTANCE_SIGNAL = 'importance:signal';
+        const IMPORTANCE_NOISE = 'importance:noise';
+        const currentOptionId = importance
+          ? IMPORTANCE_SIGNAL
+          : IMPORTANCE_NOISE;
+        filters.push({
+          categoryLabel: 'Importance',
+          optionId: currentOptionId,
+          optionLabel: importance ? 'Signal' : 'Noise',
+          categoryOptions: [
+            { id: IMPORTANCE_SIGNAL, label: 'Signal' },
+            { id: IMPORTANCE_NOISE, label: 'Noise' },
+          ] as unknown as ActiveFilter['categoryOptions'],
+          multiple: false,
+          isOptionActive: (optionId) => optionId === currentOptionId,
+          onRemove: () =>
+            setQueryFilters((prev) => ({
+              ...prev,
+              email_filters: { ...prev.email_filters, importance: undefined },
+            })),
+          onReplace: (newOptionId) =>
+            setQueryFilters((prev) => ({
+              ...prev,
+              email_filters: {
+                ...prev.email_filters,
+                importance: newOptionId === IMPORTANCE_SIGNAL,
+              },
+            })),
+        });
+      }
     }
 
     return filters;
