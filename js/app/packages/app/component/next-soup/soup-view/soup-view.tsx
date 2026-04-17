@@ -96,6 +96,7 @@ import { SoupViewCreateButton } from '@app/component/next-soup/soup-view/soup-vi
 import { MobileFilterDrawer } from '@app/component/next-soup/soup-view/filters-bar/mobile-filter-drawer';
 import { SettingsButton } from '@app/component/settings/SettingsButton';
 import { isListViewID, type ListView } from '@app/constants/list-views';
+import { SoupViewMobileCreateButton } from '@app/component/next-soup/soup-view/soup-view-mobile-create-button';
 import {
   SplitHeaderLeft,
   SplitHeaderRight,
@@ -216,6 +217,11 @@ export const SoupView = (props: SoupViewProps) => {
   const isComponentListView = (listView: ListView) => {
     return component() === listView;
   };
+
+  const activeListView = createMemo<ListView | undefined>(() => {
+    const id = component();
+    return id && isListViewID(id) ? id : undefined;
+  });
 
   const [narrowSearchExpanded, setNarrowSearchExpanded] = createSignal(false);
   const [searchIsCollapsed, setSearchIsCollapsed] = createSignal(false);
@@ -360,6 +366,9 @@ export const SoupView = (props: SoupViewProps) => {
                 />
               </SoupViewFileDropzone>
             </Suspense>
+            <Show when={isMobile()}>
+              <SoupViewMobileCreateButton activeView={activeListView} />
+            </Show>
           </div>
           <Show when={isMobile()}>
             <MobileSoupViewTabs />
