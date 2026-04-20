@@ -105,6 +105,10 @@ static ALLOWED_DOMAINS: &[&str] = &[
     "http://localhost:3009",
 ];
 
+type Type = std::sync::OnceLock<
+    Box<dyn Fn(&str, http::Request<Vec<u8>>, tauri::UriSchemeResponder) + Send + Sync + 'static>,
+>;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     use tracing_subscriber::EnvFilter;
@@ -206,13 +210,34 @@ pub fn run() {
             // However, tauri_protocol::get needs AppHandle upfront.
             // Use a lazy init pattern via the context.
             let window_origin = window_origin.to_string();
-            let handler: std::sync::OnceLock<
-                Box<dyn Fn(&str, http::Request<Vec<u8>>, tauri::UriSchemeResponder) + Send + Sync>,
-            > = std::sync::OnceLock::new();
+            let handler: Type = std::sync::OnceLock::new();
 
             move |ctx, request, responder| {
                 let h = handler.get_or_init(|| {
-                    tauri_protocol::get(ctx.app_handle().clone(), &window_origin)
+                    // Restore persisted bundle root before the first request is served
+                    let app = ctx.app_handle();
+                    match app.path().app_cache_dir() {
+                        Ok(cache_dir) => {
+                            tracing::info!("Protocol handler init: cache_dir={cache_dir:?}");
+                            let restored = BundleRoot::load(&cache_dir);
+                            if let Ok(val) = restored.0.read()
+                                && let Some(ref path) = *val
+                            {
+                                if let Some(br) = app.try_state::<BundleRoot>() {
+                                    tracing::info!("Setting managed BundleRoot to {path:?}");
+                                    if let Ok(mut w) = br.0.write() {
+                                        *w = Some(path.clone());
+                                    }
+                                } else {
+                                    tracing::warn!("BundleRoot state not managed yet");
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("Failed to get app_cache_dir: {e}");
+                        }
+                    }
+                    tauri_protocol::get(app.clone(), &window_origin)
                 });
                 h(ctx.webview_label(), request, responder);
             }
@@ -225,9 +250,25 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             heartbeat_response,
             macro_bundle_updater_plugin::inbound::plugin::grant_bundle_update,
-            macro_bundle_updater_plugin::inbound::plugin::perform_update
+            macro_bundle_updater_plugin::inbound::plugin::perform_update,
+            macro_bundle_updater_plugin::inbound::plugin::check_for_update,
+            macro_bundle_updater_plugin::inbound::plugin::get_bundle_update_status
         ])
         .setup(|app| {
+            // Restore persisted bundle root on startup
+            if let Ok(cache_dir) = app.path().app_cache_dir() {
+                let restored = BundleRoot::load(&cache_dir);
+                if let Ok(val) = restored.0.read()
+                    && let Some(ref path) = *val
+                {
+                    let bundle_root = app.state::<BundleRoot>();
+                    if let Ok(mut w) = bundle_root.0.write() {
+                        *w = Some(path.clone());
+                        tracing::info!("Setup: restored BundleRoot to {path:?}");
+                    }
+                }
+            }
+
             #[cfg(any(target_os = "linux", all(windows, debug_assertions)))]
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
@@ -253,7 +294,7 @@ pub fn run() {
 /// fn to merge the headers from the http cookie store into the initial
 /// GET request to open a websocket
 fn merge_header_callback<R: Runtime>(url: String, headers: &mut HeaderMap, handle: &AppHandle<R>) {
-    tracing::debug!("got url {url}");
+    tracing::trace!("got url {url}");
     let Some(s) = handle.try_state::<tauri_plugin_http::Http>() else {
         return;
     };
@@ -265,11 +306,10 @@ fn merge_header_callback<R: Runtime>(url: String, headers: &mut HeaderMap, handl
         _ => "https",
     })
     .ok();
-    tracing::debug!("checking cookies for {url}");
+    tracing::trace!("checking cookies for {url}");
 
     if let Some(cookie) = s.inner().cookies_jar.as_ref().cookies(&url) {
-        tracing::info!("inserting cookie value for {url}");
-        tracing::debug!("{cookie:?}");
+        tracing::trace!("inserting cookie value for {url}, {cookie:?}");
         headers.insert(COOKIE, cookie);
     }
 }
@@ -288,7 +328,7 @@ impl AppChain for tauri::App {
 fn attach_deep_link_handler(app: &mut tauri::App) {
     fn inner_handler(ev: OpenUrlEvent, handle: &AppHandle) -> Result<(), Report> {
         let urls = ev.urls();
-        tracing::info!("received open url event {urls:?}");
+        tracing::trace!("received open url event {urls:?}");
         let url = urls
             .into_iter()
             .next()
@@ -316,7 +356,7 @@ fn attach_deep_link_handler(app: &mut tauri::App) {
         // we send a navigate event instead of calling navigate directly
         // because navigate performs a full browser navigation
 
-        tracing::info!("{payload:?}");
+        tracing::trace!("{payload:?}");
         Ok(handle.emit("navigate", payload)?)
     }
 
