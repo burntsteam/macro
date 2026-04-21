@@ -17,6 +17,7 @@ interface SoupSearchbarProps {
   variant?: SearchbarVariant;
   autoFocus?: boolean;
   onDismiss?: () => void;
+  placeholder?: string;
 }
 
 const variantStyles: Record<SearchbarVariant, string> = {
@@ -129,7 +130,7 @@ export const SoupSearchbar = (props: SoupSearchbarProps) => {
         >
           <MarkdownShell
             config={editor}
-            placeholder="Search, @mention contacts"
+            placeholder={props.placeholder ?? 'Search'}
             autofocus={props.autoFocus}
             class="!min-h-0 !overflow-visible"
           />
