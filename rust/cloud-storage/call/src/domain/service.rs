@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use uuid::Uuid;
 
+use crate::domain::models::EditCallRecordRequest;
+
 use super::models::{
     CallActiveResponse, CallError, CallRecord, CallTokenResponse, EgressS3Config,
     GetCallRecordsRequest, LeaveCallResponse, TranscriptSegmentRequest,
@@ -712,6 +714,51 @@ impl<
             .map_err(|e| CallError::Internal(e.into()))?;
 
         Ok(())
+    }
+
+    #[tracing::instrument(err, skip(self))]
+    async fn edit_call_record(
+        &self,
+        receipt: EntityAccessReceipt<MemberParticipantRole>,
+        request: EditCallRecordRequest,
+    ) -> Result<(), CallError> {
+        let entity = receipt.entity();
+        if entity.entity_type != EntityType::Call {
+            return Err(CallError::Internal(anyhow::anyhow!(
+                "expected Call entity in receipt, got {:?}",
+                entity.entity_type
+            )));
+        }
+
+        let call_id = macro_uuid::string_to_uuid(&entity.entity_id)
+            .map_err(|_| CallError::Internal(anyhow::anyhow!("invalid call entity receipt")))?;
+
+        self.repo
+            .patch_call_record(&call_id, &request)
+            .await
+            .map_err(|e| CallError::Internal(e.into()))
+    }
+
+    #[tracing::instrument(err, skip(self))]
+    async fn toggle_share_with_team(
+        &self,
+        receipt: EntityAccessReceipt<MemberParticipantRole>,
+    ) -> Result<bool, CallError> {
+        let entity = receipt.entity();
+        if entity.entity_type != EntityType::Call {
+            return Err(CallError::Internal(anyhow::anyhow!(
+                "expected Call entity in receipt, got {:?}",
+                entity.entity_type
+            )));
+        }
+
+        let call_id = macro_uuid::string_to_uuid(&entity.entity_id)
+            .map_err(|_| CallError::Internal(anyhow::anyhow!("invalid call entity receipt")))?;
+
+        self.repo
+            .toggle_share_with_team(&call_id)
+            .await
+            .map_err(|e| CallError::Internal(e.into()))
     }
 }
 

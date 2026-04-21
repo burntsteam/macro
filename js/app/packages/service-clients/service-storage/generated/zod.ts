@@ -917,6 +917,71 @@ export const deleteCallRecordParams = zod.object({
 });
 
 /**
+ * Edits a call record — currently supports updating the record's share
+permissions. Access is validated via channel membership
+ * @summary Handler for `PATCH /call/record/{call_id}`.
+ */
+export const editCallRecordParams = zod.object({
+  call_id: zod.string().uuid().describe('Call ID'),
+});
+
+export const editCallRecordBody = zod
+  .object({
+    sharePermission: zod
+      .union([
+        zod.null(),
+        zod.object({
+          channelSharePermissions: zod
+            .array(
+              zod.object({
+                accessLevel: zod
+                  .union([
+                    zod.null(),
+                    zod
+                      .enum(['view', 'comment', 'edit', 'owner'])
+                      .describe(
+                        'Ordered from least to most access top -> bottom'
+                      ),
+                  ])
+                  .optional(),
+                channelId: zod.string().describe('The channel id'),
+                operation: zod.enum(['add', 'remove', 'replace']),
+              })
+            )
+            .nullish()
+            .describe(
+              'Any channel share permissions to be created/updated/removed'
+            ),
+          isPublic: zod
+            .boolean()
+            .nullish()
+            .describe('If the item is publicly accessible'),
+          publicAccessLevel: zod
+            .union([
+              zod.null(),
+              zod
+                .enum(['view', 'comment', 'edit', 'owner'])
+                .describe('Ordered from least to most access top -> bottom'),
+            ])
+            .optional(),
+        }),
+      ])
+      .optional(),
+  })
+  .describe('Edit call request');
+
+/**
+ * Toggles the `share_with_team` flag on the active call. Returns the new
+value as the JSON body.
+ * @summary Handler for `POST /call/record/{call_id}/share-with-team/toggle`.
+ */
+export const toggleShareWithTeamParams = zod.object({
+  call_id: zod.string().uuid().describe('Call ID'),
+});
+
+export const toggleShareWithTeamResponse = zod.boolean();
+
+/**
  * Gets or creates a call for the channel. If a call already exists, joins it;
 otherwise creates a new one. Always returns a join token.
  * @summary Handler for `GET /call/{channel_id}`.
@@ -8199,6 +8264,7 @@ export const createProjectHandlerBody = zod.object({
   name: zod.string().describe('The name of the project.'),
   projectParentId: zod
     .string()
+    .uuid()
     .nullish()
     .describe('The project that the new project will belong to.'),
 });
@@ -9788,6 +9854,67 @@ export const patchViewHandlerBody = zod.object({
 });
 
 /**
+ * @summary Edits the share permissions of a thread.
+ */
+export const editThreadV2Params = zod.object({
+  thread_id: zod.string().describe('thread ID'),
+});
+
+export const editThreadV2Body = zod.object({
+  projectId: zod
+    .string()
+    .nullish()
+    .describe('The new project that the thread will belong to.'),
+  sharePermission: zod
+    .union([
+      zod.null(),
+      zod.object({
+        channelSharePermissions: zod
+          .array(
+            zod.object({
+              accessLevel: zod
+                .union([
+                  zod.null(),
+                  zod
+                    .enum(['view', 'comment', 'edit', 'owner'])
+                    .describe(
+                      'Ordered from least to most access top -> bottom'
+                    ),
+                ])
+                .optional(),
+              channelId: zod.string().describe('The channel id'),
+              operation: zod.enum(['add', 'remove', 'replace']),
+            })
+          )
+          .nullish()
+          .describe(
+            'Any channel share permissions to be created/updated/removed'
+          ),
+        isPublic: zod
+          .boolean()
+          .nullish()
+          .describe('If the item is publicly accessible'),
+        publicAccessLevel: zod
+          .union([
+            zod.null(),
+            zod
+              .enum(['view', 'comment', 'edit', 'owner'])
+              .describe('Ordered from least to most access top -> bottom'),
+          ])
+          .optional(),
+      }),
+    ])
+    .optional(),
+});
+
+export const editThreadV2Response = zod.object({
+  data: zod.object({
+    success: zod.boolean().describe('Indicates if the request was successful'),
+  }),
+  error: zod.boolean().describe('Indicates if an error occurred'),
+});
+
+/**
  * @summary Gets a UserPdfDocumentLocation entry
  */
 export const getUserDocumentViewLocationParams = zod.object({
@@ -9917,67 +10044,6 @@ export const editProjectV2Body = zod.object({
 });
 
 export const editProjectV2Response = zod.object({
-  data: zod.object({
-    success: zod.boolean().describe('Indicates if the request was successful'),
-  }),
-  error: zod.boolean().describe('Indicates if an error occurred'),
-});
-
-/**
- * @summary Edits the share permissions of a thread.
- */
-export const editThreadV2Params = zod.object({
-  thread_id: zod.string().describe('thread ID'),
-});
-
-export const editThreadV2Body = zod.object({
-  projectId: zod
-    .string()
-    .nullish()
-    .describe('The new project that the thread will belong to.'),
-  sharePermission: zod
-    .union([
-      zod.null(),
-      zod.object({
-        channelSharePermissions: zod
-          .array(
-            zod.object({
-              accessLevel: zod
-                .union([
-                  zod.null(),
-                  zod
-                    .enum(['view', 'comment', 'edit', 'owner'])
-                    .describe(
-                      'Ordered from least to most access top -> bottom'
-                    ),
-                ])
-                .optional(),
-              channelId: zod.string().describe('The channel id'),
-              operation: zod.enum(['add', 'remove', 'replace']),
-            })
-          )
-          .nullish()
-          .describe(
-            'Any channel share permissions to be created/updated/removed'
-          ),
-        isPublic: zod
-          .boolean()
-          .nullish()
-          .describe('If the item is publicly accessible'),
-        publicAccessLevel: zod
-          .union([
-            zod.null(),
-            zod
-              .enum(['view', 'comment', 'edit', 'owner'])
-              .describe('Ordered from least to most access top -> bottom'),
-          ])
-          .optional(),
-      }),
-    ])
-    .optional(),
-});
-
-export const editThreadV2Response = zod.object({
   data: zod.object({
     success: zod.boolean().describe('Indicates if the request was successful'),
   }),

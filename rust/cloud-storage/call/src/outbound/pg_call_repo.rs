@@ -1,5 +1,7 @@
 //! Postgres-backed repository for call state.
 
+mod edit;
+
 #[cfg(test)]
 mod test;
 
@@ -18,7 +20,7 @@ use uuid::Uuid;
 use crate::domain::channel_name::{NameLookup, display_name, resolve_channel_name};
 use crate::domain::models::{
     Call, CallParticipant, CallRecord, CallRecordParticipant, CallRecordTranscriptSegment,
-    TranscriptSegmentRequest,
+    EditCallRecordRequest, TranscriptSegmentRequest,
 };
 use crate::domain::ports::CallRepository;
 
@@ -127,6 +129,27 @@ impl CallRepository for PgCallRepo {
             share_permission.channel_share_permissions.as_ref().unwrap()[0].access_level as _,
         )
         .execute(tx.as_mut())
+        .await?;
+
+        // owner entity access row
+        entity_access_db_utils::insert_entity_access_row(
+            &mut tx,
+            call_id,
+            entity_access_db_utils::EntityType::Call,
+            created_by.as_ref(),
+            entity_access_db_utils::EntityAccessSourceType::User,
+            entity_access_db_utils::AccessLevel::Owner,
+        )
+        .await?;
+
+        entity_access_db_utils::insert_entity_access_row(
+            &mut tx,
+            call_id,
+            entity_access_db_utils::EntityType::Call,
+            &channel_id.to_string(),
+            entity_access_db_utils::EntityAccessSourceType::Channel,
+            entity_access_db_utils::AccessLevel::View,
+        )
         .await?;
 
         let row = sqlx::query!(
@@ -339,14 +362,25 @@ impl CallRepository for PgCallRepo {
 
     #[tracing::instrument(err, skip(self))]
     async fn delete_call(&self, call_id: &Uuid) -> Result<(), Self::Err> {
+        let mut tx = self.pool.begin().await?;
+
         sqlx::query!(
             r#"
             DELETE FROM calls WHERE id = $1
             "#,
             call_id,
         )
-        .execute(&self.pool)
+        .execute(tx.as_mut())
         .await?;
+
+        entity_access_db_utils::delete_entity_access_rows(
+            &mut tx,
+            call_id,
+            entity_access_db_utils::EntityType::Call,
+        )
+        .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 
@@ -365,13 +399,29 @@ impl CallRepository for PgCallRepo {
     }
 
     #[tracing::instrument(err, skip(self))]
+    async fn toggle_share_with_team(&self, call_id: &Uuid) -> Result<bool, Self::Err> {
+        let row = sqlx::query!(
+            r#"
+            UPDATE calls
+               SET share_with_team = NOT share_with_team
+             WHERE id = $1
+            RETURNING share_with_team
+            "#,
+            call_id,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.share_with_team)
+    }
+
+    #[tracing::instrument(err, skip(self))]
     async fn archive_call(&self, call_id: &Uuid) -> Result<Uuid, Self::Err> {
         let mut tx = self.pool.begin().await?;
 
         // Fetch and lock the active call so concurrent archive_call callers serialize.
         let call = sqlx::query!(
             r#"
-            SELECT id, channel_id, room_name, created_by, created_at, egress_id, recording_key, share_permission_id
+            SELECT id, channel_id, room_name, created_by, created_at, egress_id, recording_key, share_permission_id, share_with_team
             FROM calls
             WHERE id = $1
             FOR UPDATE
@@ -381,6 +431,34 @@ impl CallRepository for PgCallRepo {
         .fetch_optional(tx.as_mut())
         .await?
         .ok_or(sqlx::Error::RowNotFound)?;
+
+        // If the call opted in to team sharing, grant the creator's team View
+        // access on the archived call. Silently skip if the creator has no team.
+        if call.share_with_team {
+            let team_id: Option<Uuid> = sqlx::query_scalar!(
+                r#"
+                SELECT team_id
+                FROM team_user
+                WHERE user_id = $1
+                LIMIT 1
+                "#,
+                &call.created_by,
+            )
+            .fetch_optional(tx.as_mut())
+            .await?;
+
+            if let Some(team_id) = team_id {
+                entity_access_db_utils::insert_entity_access_row(
+                    &mut tx,
+                    call_id,
+                    entity_access_db_utils::EntityType::Call,
+                    &team_id.to_string(),
+                    entity_access_db_utils::EntityAccessSourceType::Team,
+                    entity_access_db_utils::AccessLevel::View,
+                )
+                .await?;
+            }
+        }
 
         let now = Utc::now();
         let duration_ms = now
@@ -1038,14 +1116,41 @@ impl CallRepository for PgCallRepo {
 
     #[tracing::instrument(err, skip(self))]
     async fn delete_call_record(&self, call_record_id: &Uuid) -> Result<Option<String>, Self::Err> {
+        let mut tx = self.pool.begin().await?;
+
         let row = sqlx::query!(
             r#"
             DELETE FROM call_records WHERE id = $1 RETURNING recording_key
             "#,
             call_record_id,
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(tx.as_mut())
         .await?;
+
+        entity_access_db_utils::delete_entity_access_rows(
+            &mut tx,
+            call_record_id,
+            entity_access_db_utils::EntityType::Call,
+        )
+        .await?;
+
+        tx.commit().await?;
         Ok(row.and_then(|r| r.recording_key))
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    async fn patch_call_record(
+        &self,
+        call_record_id: &Uuid,
+        request: &EditCallRecordRequest,
+    ) -> Result<(), Self::Err> {
+        let mut tx = self.pool.begin().await?;
+
+        if let Some(share_permission) = request.share_permission.as_ref() {
+            edit::update_share_permission(&mut tx, call_record_id, share_permission).await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 }
