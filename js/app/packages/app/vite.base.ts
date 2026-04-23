@@ -12,7 +12,15 @@ import tsconfigpaths from 'vite-tsconfig-paths';
 // @ts-ignore
 import { version } from './package.json';
 
-const shortSha = execSync('git rev-parse --short HEAD').toString().trim();
+function readShortSha(): string {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    return 'unknown';
+  }
+}
+
+const shortSha = readShortSha();
 const appVersion = `${version}+${shortSha}`;
 
 function readGitBranch(): string {
