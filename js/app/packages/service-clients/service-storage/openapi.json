@@ -6214,6 +6214,13 @@
               "type": "string"
             },
             "description": "Channel IDs to filter calls by. Empty to include all calls."
+          },
+          "speaker_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Speaker macro user ids. Empty to include all."
           }
         }
       },

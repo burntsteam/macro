@@ -106,7 +106,14 @@ export interface ContentSearch {
   /**
    * Which types of items to search. Leave empty to search all types. Examples: ['documents'], ['emails', 'documents'], ['channels']
    */
-  entityTypes: ('documents' | 'chats' | 'emails' | 'channels' | 'projects')[];
+  entityTypes: (
+    | 'documents'
+    | 'chats'
+    | 'emails'
+    | 'channels'
+    | 'projects'
+    | 'call_records'
+  )[];
   /**
    * The text content to search for. This searches within the body of documents, emails, and messages.
    */
@@ -573,6 +580,65 @@ export interface SearchToolResponse {
         type: 'project';
         updated_at: string;
       }
+    | {
+        call_id: string;
+        call_search_results: {
+          ended_at?: string | null;
+          highlight: {
+            /**
+             * The highlight match on the bcc (email only)
+             */
+            bcc?: string[];
+            /**
+             * The highlight match on the cc (email only)
+             */
+            cc?: string[];
+            /**
+             * The highlight match on the content field
+             */
+            content?: string[];
+            /**
+             * The highlight match on the name field
+             */
+            name?: string | null;
+            /**
+             * The highlight match on the recipients (email only)
+             */
+            recipients?: string[];
+            /**
+             * The highlight match on the sender (email only)
+             */
+            sender?: string | null;
+            /**
+             * The highlight match on the user (owner) of the entity
+             */
+            user_id?: string | null;
+          };
+          score?: number | null;
+          sequence_num?: number | null;
+          speaker_id?: string | null;
+          started_at?: string | null;
+          transcript_id?: string | null;
+        }[];
+        channel_id: string;
+        id: string;
+        /**
+         * `None` if the call has been deleted.
+         */
+        metadata?: {
+          attended: boolean;
+          channel_name?: string | null;
+          created_by: string;
+          duration_ms: number;
+          ended_at: string;
+          started_at: string;
+          updated_at: string;
+        } | null;
+        name?: string | null;
+        owner_id: string;
+        participant_ids: string[];
+        type: 'callRecord';
+      }
   )[];
 }
 
@@ -983,7 +1049,14 @@ export interface NameSearch {
   /**
    * Which types of items to search. Leave empty to search all types. Examples: ['documents'], ['emails', 'documents'], ['channels']
    */
-  entityTypes: ('documents' | 'chats' | 'emails' | 'channels' | 'projects')[];
+  entityTypes: (
+    | 'documents'
+    | 'chats'
+    | 'emails'
+    | 'channels'
+    | 'projects'
+    | 'call_records'
+  )[];
   /**
    * The name or title to search for. For emails, this is the subject line. For channels, this can be the channel name or participant names.
    */

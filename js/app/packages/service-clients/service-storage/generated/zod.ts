@@ -5197,6 +5197,10 @@ export const postItemsSoupBody = zod
           .describe(
             'Channel IDs to filter calls by. Empty to include all calls.'
           ),
+        speaker_ids: zod
+          .array(zod.string())
+          .optional()
+          .describe('Speaker macro user ids. Empty to include all.'),
       })
       .optional()
       .describe('Filters for call records.'),

@@ -62,6 +62,8 @@ export type ActiveFilter = {
    */
   isPopupOpen?: Accessor<boolean>;
   setPopupOpen?: (v: boolean) => void;
+  /** Per-chip override for the container-level `hideCategoryLabel`. */
+  hideCategoryLabel?: boolean;
 };
 
 interface ActiveFilterChipsProps {
@@ -128,7 +130,11 @@ const SearchableFilterChip = (props: {
             )}
           </Show>
           <span class="font-medium">
-            <Show when={!props.hideCategoryLabel}>
+            <Show
+              when={
+                !(props.filter.hideCategoryLabel ?? props.hideCategoryLabel)
+              }
+            >
               {props.filter.categoryLabel}:{' '}
             </Show>
             {props.filter.optionLabel()}
@@ -188,7 +194,11 @@ const FilterChip = (props: {
               )}
             </Show>
             <span class="font-medium">
-              <Show when={!props.hideCategoryLabel}>
+              <Show
+                when={
+                  !(props.filter.hideCategoryLabel ?? props.hideCategoryLabel)
+                }
+              >
                 {props.filter.categoryLabel}:{' '}
               </Show>
               {props.filter.optionLabel()}
@@ -211,7 +221,11 @@ const FilterChip = (props: {
               )}
             </Show>
             <span class="font-medium">
-              <Show when={!props.hideCategoryLabel}>
+              <Show
+                when={
+                  !(props.filter.hideCategoryLabel ?? props.hideCategoryLabel)
+                }
+              >
                 {props.filter.categoryLabel}:{' '}
               </Show>
               {props.filter.optionLabel()}
