@@ -1,5 +1,4 @@
 import { DropdownMenu } from '@kobalte/core/dropdown-menu';
-import { match } from 'ts-pattern';
 import { cn } from '@ui/utils/classname';
 import { Button } from '@app/component/next-soup/soup-view/filters-bar/button';
 import { useSplitPanelOrThrow } from '@app/component/split-layout/layoutUtils';
@@ -13,8 +12,10 @@ import {
   createSignal,
   For,
   type JSX,
+  Match,
   onCleanup,
   Show,
+  Switch,
 } from 'solid-js';
 import SlidersHorizontalIcon from '@macro-icons/wide/sliders-horizontal.svg';
 import CaretRightIcon from '@icon/regular/caret-right.svg';
@@ -562,79 +563,82 @@ const CallSearchSubContent = (props: {
   );
 };
 
-/** One row in the Type picker — a flat item, or a Sub with nested filters. */
-const SearchIndexRow = (props: {
+const SearchIndexRowLabel = (props: {
+  option: (typeof INDEX_OPTIONS)[number];
+  active: Accessor<boolean>;
+}) => (
+  <>
+    <TypeIndicator active={props.active()} />
+    <Show when={props.option.icon}>
+      {(icon) => (
+        <span class="size-4 flex items-center justify-center shrink-0">
+          {icon()()}
+        </span>
+      )}
+    </Show>
+    <span
+      class={cn(
+        'flex-1 truncate',
+        props.active() ? 'text-ink' : 'text-ink-muted'
+      )}
+    >
+      {props.option.label}
+    </span>
+  </>
+);
+
+/** Flat row — selecting it just switches the active index. */
+const SearchIndexItem = (props: {
+  option: (typeof INDEX_OPTIONS)[number];
+  active: Accessor<boolean>;
+  onSelect: () => void;
+}) => (
+  <DropdownMenu.Item
+    class="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xs text-left text-xs transition-colors hover:bg-hover outline-none data-highlighted:bg-hover"
+    onSelect={props.onSelect}
+    closeOnSelect
+  >
+    <SearchIndexRowLabel option={props.option} active={props.active} />
+  </DropdownMenu.Item>
+);
+
+/** Row with a nested submenu.
+ *
+ * `children` must be lazy (via `<Match>`) so the nested submenus
+ * instantiate *inside* this row's `DropdownMenu.SubContent`. Eager JSX
+ * would evaluate in the outer content's context, which makes Kobalte
+ * register nested `DropdownMenu.Sub`s against the wrong parent —
+ * positioning falls back to the viewport and keyboard nav treats them as
+ * siblings of the row. */
+const SearchIndexSubRow = (props: {
   option: (typeof INDEX_OPTIONS)[number];
   active: Accessor<boolean>;
   onSelect: () => void;
   closeRoot: () => void;
-  subContent?: JSX.Element;
+  children: JSX.Element;
 }) => (
-  <Show
-    when={props.subContent !== undefined}
-    fallback={
-      <DropdownMenu.Item
-        class="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xs text-left text-xs transition-colors hover:bg-hover outline-none data-highlighted:bg-hover"
-        onSelect={props.onSelect}
-        closeOnSelect
-      >
-        <TypeIndicator active={props.active()} />
-        <Show when={props.option.icon}>
-          {(icon) => (
-            <span class="size-4 flex items-center justify-center shrink-0">
-              {icon()()}
-            </span>
-          )}
-        </Show>
-        <span
-          class={cn(
-            'flex-1 truncate',
-            props.active() ? 'text-ink' : 'text-ink-muted'
-          )}
-        >
-          {props.option.label}
-        </span>
-      </DropdownMenu.Item>
-    }
-  >
-    <DropdownMenu.Sub gutter={4}>
-      <DropdownMenu.SubTrigger
-        class="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xs text-left text-xs transition-colors hover:bg-hover outline-none data-highlighted:bg-hover"
-        onPointerDown={props.onSelect}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.stopPropagation();
-            props.onSelect();
-            props.closeRoot();
-          }
-        }}
-      >
-        <TypeIndicator active={props.active()} />
-        <Show when={props.option.icon}>
-          {(icon) => (
-            <span class="size-4 flex items-center justify-center shrink-0">
-              {icon()()}
-            </span>
-          )}
-        </Show>
-        <span
-          class={cn(
-            'flex-1 truncate',
-            props.active() ? 'text-ink' : 'text-ink-muted'
-          )}
-        >
-          {props.option.label}
-        </span>
-        <CaretRightIcon class="size-3 text-ink-muted" />
-      </DropdownMenu.SubTrigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.SubContent class="z-action-menu bg-menu border border-edge-muted rounded-sm shadow-xl min-w-[180px] p-1">
-          {props.subContent}
-        </DropdownMenu.SubContent>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Sub>
-  </Show>
+  <DropdownMenu.Sub gutter={4}>
+    <DropdownMenu.SubTrigger
+      class="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xs text-left text-xs transition-colors hover:bg-hover outline-none data-highlighted:bg-hover"
+      onPointerDown={props.onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          props.onSelect();
+          props.closeRoot();
+        }
+      }}
+    >
+      <SearchIndexRowLabel option={props.option} active={props.active} />
+      <CaretRightIcon class="size-3 text-ink-muted" />
+    </DropdownMenu.SubTrigger>
+    <DropdownMenu.Portal>
+      <DropdownMenu.SubContent class="z-action-menu bg-menu border border-edge-muted rounded-sm shadow-xl min-w-[180px] p-1">
+        {props.children}
+      </DropdownMenu.SubContent>
+    </DropdownMenu.Portal>
+  </DropdownMenu.Sub>
 );
 
 export const UnifiedFilterDropdown = () => {
@@ -822,33 +826,38 @@ export const UnifiedFilterDropdown = () => {
                   <Show when={isSearchView()}>
                     <For each={INDEX_OPTIONS}>
                       {(option) => {
-                        const subContent = match(option.value)
-                          .with('channels', () => (
-                            <ChannelSearchSubContent
-                              channel={channel}
-                              channelOptions={inChannelOptions}
-                              senderOptions={fromSenderOptions}
-                            />
-                          ))
-                          .with('email', () => (
-                            <EmailSearchSubContent email={email} />
-                          ))
-                          .with('calls', () => (
-                            <CallSearchSubContent
-                              call={call}
-                              channelOptions={inChannelOptions}
-                              senderOptions={fromSenderOptions}
-                            />
-                          ))
-                          .otherwise(() => undefined);
+                        const rowProps = {
+                          option,
+                          active: () => soup.filters.isActive(option.value),
+                          onSelect: () => handleIndexChange(option.value),
+                          closeRoot: () => setOpen(false),
+                        };
                         return (
-                          <SearchIndexRow
-                            option={option}
-                            active={() => soup.filters.isActive(option.value)}
-                            onSelect={() => handleIndexChange(option.value)}
-                            closeRoot={() => setOpen(false)}
-                            subContent={subContent}
-                          />
+                          <Switch fallback={<SearchIndexItem {...rowProps} />}>
+                            <Match when={option.value === 'channels'}>
+                              <SearchIndexSubRow {...rowProps}>
+                                <ChannelSearchSubContent
+                                  channel={channel}
+                                  channelOptions={inChannelOptions}
+                                  senderOptions={fromSenderOptions}
+                                />
+                              </SearchIndexSubRow>
+                            </Match>
+                            <Match when={option.value === 'email'}>
+                              <SearchIndexSubRow {...rowProps}>
+                                <EmailSearchSubContent email={email} />
+                              </SearchIndexSubRow>
+                            </Match>
+                            <Match when={option.value === 'calls'}>
+                              <SearchIndexSubRow {...rowProps}>
+                                <CallSearchSubContent
+                                  call={call}
+                                  channelOptions={inChannelOptions}
+                                  senderOptions={fromSenderOptions}
+                                />
+                              </SearchIndexSubRow>
+                            </Match>
+                          </Switch>
                         );
                       }}
                     </For>
