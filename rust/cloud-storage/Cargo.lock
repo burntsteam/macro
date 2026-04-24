@@ -7079,7 +7079,9 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "native_app_service",
+ "rootcause",
  "semver",
+ "sha2",
  "tokio",
  "tower-http",
  "tracing",
@@ -7091,10 +7093,11 @@ dependencies = [
 name = "native_app_service"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "axum",
  "cool_asserts",
+ "futures",
  "reqwest",
+ "rootcause",
  "semver",
  "serde",
  "serde_json",
