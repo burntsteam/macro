@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod test;
 
-pub use crate::domain::models::ChannelMessageFilters;
 use crate::domain::models::{
     ChannelAttachment, ChannelAttachmentType, ChannelMessage, ChannelParticipant, CountedReaction,
     MessageAttachment, MessagePageDirection, ParticipantRole, ThreadInfo, ThreadReply,
 };
+pub use crate::domain::models::{ChannelMessageFilters, NotificationFilters};
 use crate::domain::ports::{
     ChannelMessagesErr, ChannelMessagesPage, ChannelMessagesQueryResult, ChannelMessagesService,
 };
@@ -24,6 +24,7 @@ use entity_access::{
     },
     inbound::axum_extractors::ChannelAccessLevelExtractor,
 };
+use macro_user_id::user_id::MacroUserIdStr;
 use model_error_response::ErrorResponse;
 use models_pagination::{
     Base64Str, BidirectionalCursor, CreatedAt, Cursor, CursorOptionExt, CursorVal,
@@ -69,6 +70,20 @@ fn channel_id_from_receipt<T: RequiredPermission>(
 ) -> Result<Uuid, ChannelsHandlerErr> {
     Uuid::parse_str(&receipt.entity().entity_id)
         .map_err(|_| ChannelsHandlerErr::BadRequest("Invalid channel_id"))
+}
+
+fn notification_user_id_from_receipt<T: RequiredPermission>(
+    receipt: &EntityAccessReceipt<T>,
+    filters: &ChannelMessageFilters,
+) -> Result<Option<MacroUserIdStr<'static>>, ChannelsHandlerErr> {
+    if filters.notification_filters.is_empty() {
+        return Ok(None);
+    }
+
+    let user = receipt.get_authenticated_user().map_err(|_| {
+        ChannelsHandlerErr::BadRequest("notification filters require authenticated user")
+    })?;
+    Ok(Some(user.clone()))
 }
 
 const MAX_MESSAGE_ID_FILTERS: usize = 100;
@@ -205,7 +220,7 @@ pub async fn get_channel_messages_handler<S: ChannelMessagesService, Svc: Entity
 ) -> Result<Json<ApiChannelMessagesPage>, ChannelsHandlerErr> {
     let channel_id = channel_id_from_receipt(&access.entity_access_receipt)?;
     let filters = ChannelMessageFilters::default();
-    channel_messages_response(&state, params, cursor, channel_id, &filters).await
+    channel_messages_response(&state, params, cursor, channel_id, &filters, None).await
 }
 
 /// Handler for `POST /channels/{channel_id}/messages`.
@@ -251,7 +266,17 @@ pub async fn post_channel_messages_handler<S: ChannelMessagesService, Svc: Entit
     if filters.message_ids.len() > MAX_MESSAGE_ID_FILTERS {
         return Err(ChannelsHandlerErr::BadRequest("too many message_ids"));
     }
-    channel_messages_response(&state, params, cursor, channel_id, &filters).await
+    let notification_user_id =
+        notification_user_id_from_receipt(&access.entity_access_receipt, &filters)?;
+    channel_messages_response(
+        &state,
+        params,
+        cursor,
+        channel_id,
+        &filters,
+        notification_user_id,
+    )
+    .await
 }
 
 async fn channel_messages_response<S: ChannelMessagesService, Svc>(
@@ -260,6 +285,7 @@ async fn channel_messages_response<S: ChannelMessagesService, Svc>(
     cursor: Option<BidirectionalCursor<Uuid, CreatedAt, ()>>,
     channel_id: Uuid,
     filters: &ChannelMessageFilters,
+    notification_user_id: Option<MacroUserIdStr<'static>>,
 ) -> Result<Json<ApiChannelMessagesPage>, ChannelsHandlerErr> {
     let limit = params.limit.unwrap_or(50).clamp(1, 100);
     let (query, direction, has_cursor) = parse_messages_query(cursor);
@@ -291,7 +317,14 @@ async fn channel_messages_response<S: ChannelMessagesService, Svc>(
                 has_more_newer,
             } = state
                 .service
-                .get_channel_messages(channel_id, query, direction, limit, filters)
+                .get_channel_messages(
+                    channel_id,
+                    query,
+                    direction,
+                    limit,
+                    filters,
+                    notification_user_id,
+                )
                 .await?;
             (page, has_more_newer)
         }

@@ -4,6 +4,7 @@ use crate::domain::models::{
     ThreadReplyRow, TopLevelMessageRow,
 };
 use chrono::{DateTime, Utc};
+use macro_user_id::user_id::MacroUserIdStr;
 use models_pagination::{CreatedAt, Query};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -15,6 +16,8 @@ pub trait ChannelMessagesRepo: Send + Sync + 'static {
     type Err: Send;
 
     /// Fetch top-level messages (thread_id IS NULL). Cursor-paginated on created_at DESC.
+    ///
+    /// `notification_user_id` is used only when `filters.notification_filters` is non-empty.
     fn get_top_level_messages(
         &self,
         channel_id: Uuid,
@@ -22,6 +25,7 @@ pub trait ChannelMessagesRepo: Send + Sync + 'static {
         direction: MessagePageDirection,
         limit: u16,
         filters: &ChannelMessageFilters,
+        notification_user_id: Option<MacroUserIdStr<'static>>,
     ) -> impl Future<Output = Result<TopLevelMessagesQueryResult, Self::Err>> + Send;
 
     /// Batch-fetch thread data (stats + preview replies) for parent messages in a single query.
@@ -86,6 +90,8 @@ pub trait ChannelMessagesRepo: Send + Sync + 'static {
 /// Service for fetching paginated channel messages.
 pub trait ChannelMessagesService: Send + Sync + 'static {
     /// Fetch a page of channel messages with thread previews, reactions, and attachments.
+    ///
+    /// `notification_user_id` is used only when `filters.notification_filters` is non-empty.
     fn get_channel_messages(
         &self,
         channel_id: Uuid,
@@ -93,6 +99,7 @@ pub trait ChannelMessagesService: Send + Sync + 'static {
         direction: MessagePageDirection,
         limit: u16,
         filters: &ChannelMessageFilters,
+        notification_user_id: Option<MacroUserIdStr<'static>>,
     ) -> impl Future<Output = Result<ChannelMessagesQueryResult, ChannelMessagesErr>> + Send;
 
     /// Fetch a paginated page of channel-level attachments.

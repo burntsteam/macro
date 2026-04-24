@@ -18,6 +18,7 @@ use entity_access::domain::{
     ports::EntityAccessService,
 };
 use http_body_util::BodyExt;
+use macro_user_id::cowlike::CowLike;
 use macro_user_id::user_id::MacroUserIdStr;
 use macro_user_id::{lowercased::Lowercase, user_id::MacroUserId};
 use model_user::UserContext;
@@ -172,6 +173,7 @@ impl ChannelMessagesService for MockService {
         _direction: MessagePageDirection,
         _limit: u16,
         _filters: &ChannelMessageFilters,
+        _notification_user_id: Option<MacroUserIdStr<'_>>,
     ) -> Result<ChannelMessagesQueryResult, ChannelMessagesErr> {
         Ok(ChannelMessagesQueryResult {
             page: Vec::<ChannelMessage>::new()
@@ -239,6 +241,7 @@ impl ChannelMessagesService for ErrorService {
         _direction: MessagePageDirection,
         _limit: u16,
         _filters: &ChannelMessageFilters,
+        _notification_user_id: Option<MacroUserIdStr<'_>>,
     ) -> Result<ChannelMessagesQueryResult, ChannelMessagesErr> {
         Err(ChannelMessagesErr::Repo(anyhow::anyhow!("database error")))
     }
@@ -288,6 +291,7 @@ impl ChannelMessagesService for ParticipantsService {
         _direction: MessagePageDirection,
         _limit: u16,
         _filters: &ChannelMessageFilters,
+        _notification_user_id: Option<MacroUserIdStr<'_>>,
     ) -> Result<ChannelMessagesQueryResult, ChannelMessagesErr> {
         Ok(ChannelMessagesQueryResult {
             page: Vec::<ChannelMessage>::new()
@@ -591,6 +595,7 @@ impl ChannelMessagesService for NotFoundService {
         _direction: MessagePageDirection,
         _limit: u16,
         _filters: &ChannelMessageFilters,
+        _notification_user_id: Option<MacroUserIdStr<'_>>,
     ) -> Result<ChannelMessagesQueryResult, ChannelMessagesErr> {
         Ok(ChannelMessagesQueryResult {
             page: Vec::<ChannelMessage>::new()
@@ -653,6 +658,7 @@ impl ChannelMessagesService for AroundHasItemsService {
         _direction: MessagePageDirection,
         _limit: u16,
         _filters: &ChannelMessageFilters,
+        _notification_user_id: Option<MacroUserIdStr<'_>>,
     ) -> Result<ChannelMessagesQueryResult, ChannelMessagesErr> {
         Ok(ChannelMessagesQueryResult {
             page: Vec::<ChannelMessage>::new()
@@ -832,12 +838,14 @@ async fn messages_around_returns_404_when_not_found() {
 
 struct CapturingService {
     captured: std::sync::Mutex<Option<ChannelMessageFilters>>,
+    captured_notification_user_id: std::sync::Mutex<Option<MacroUserIdStr<'static>>>,
 }
 
 impl CapturingService {
     fn new() -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self {
             captured: std::sync::Mutex::new(None),
+            captured_notification_user_id: std::sync::Mutex::new(None),
         })
     }
 }
@@ -850,8 +858,11 @@ impl ChannelMessagesService for std::sync::Arc<CapturingService> {
         _direction: MessagePageDirection,
         _limit: u16,
         filters: &ChannelMessageFilters,
+        notification_user_id: Option<MacroUserIdStr<'_>>,
     ) -> Result<ChannelMessagesQueryResult, ChannelMessagesErr> {
         *self.captured.lock().unwrap() = Some(filters.clone());
+        *self.captured_notification_user_id.lock().unwrap() =
+            notification_user_id.map(CowLike::into_owned);
         Ok(ChannelMessagesQueryResult {
             page: Vec::<ChannelMessage>::new()
                 .into_iter()
@@ -931,6 +942,8 @@ async fn post_messages_empty_body_uses_default_filters() {
     let captured = svc.captured.lock().unwrap().clone().unwrap();
     assert!(captured.message_ids.is_empty());
     assert!(captured.last_activity.is_none());
+    assert!(captured.notification_filters.is_empty());
+    assert!(svc.captured_notification_user_id.lock().unwrap().is_none());
 }
 
 #[tokio::test]
@@ -992,6 +1005,46 @@ async fn post_messages_forwards_last_activity_filter() {
             .unwrap()
             .with_timezone(&chrono::Utc)
     );
+}
+
+#[tokio::test]
+async fn post_messages_forwards_notification_filter_for_authenticated_user() {
+    let svc = CapturingService::new();
+    let router = channels_router(ChannelsRouterState::new(
+        svc.clone(),
+        TestAccessService::allow(),
+    ))
+    .layer(user_extension());
+
+    let channel_id = Uuid::new_v4();
+    let body = serde_json::json!({
+        "notification_filters": {
+            "done": false,
+            "seen": true
+        }
+    })
+    .to_string();
+
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("/{channel_id}/messages"))
+        .header("content-type", "application/json")
+        .body(axum::body::Body::from(body))
+        .unwrap();
+
+    let res = router.oneshot(request).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+
+    let captured = svc.captured.lock().unwrap().clone().unwrap();
+    assert_eq!(captured.notification_filters.done, Some(false));
+    assert_eq!(captured.notification_filters.seen, Some(true));
+    let captured_user_id = svc
+        .captured_notification_user_id
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(ToString::to_string);
+    assert_eq!(captured_user_id.as_deref(), Some("macro|test@example.com"));
 }
 
 #[tokio::test]
