@@ -839,6 +839,8 @@ impl CallRepository for PgCallRepo {
                 recording_key: active.recording_key,
                 recording_url: None,
                 channel_name: None,
+                custom_name: None,
+                summary: None,
                 is_active: true,
                 participants,
                 transcript,
@@ -848,7 +850,7 @@ impl CallRepository for PgCallRepo {
         // Fall back to archived `call_records`.
         let Some(archived) = sqlx::query!(
             r#"
-            SELECT id, channel_id, room_name, created_by, started_at, ended_at, duration_ms, egress_id, recording_key
+            SELECT id, channel_id, room_name, created_by, started_at, ended_at, duration_ms, egress_id, recording_key, custom_name, summary
             FROM call_records
             WHERE id = $1
             "#,
@@ -916,6 +918,8 @@ impl CallRepository for PgCallRepo {
             recording_key: archived.recording_key,
             recording_url: None,
             channel_name: None,
+            custom_name: archived.custom_name,
+            summary: archived.summary,
             is_active: false,
             participants,
             transcript,
@@ -1037,6 +1041,7 @@ impl CallRepository for PgCallRepo {
                 NULL::bigint as "duration_ms",
                 egress_id,
                 recording_key,
+                NULL::text as "custom_name",
                 true as "is_active!"
             FROM calls c
             WHERE EXISTS (
@@ -1061,6 +1066,7 @@ impl CallRepository for PgCallRepo {
                 duration_ms as "duration_ms",
                 egress_id,
                 recording_key,
+                custom_name,
                 false as "is_active!"
             FROM call_records cr
             WHERE EXISTS (
@@ -1141,6 +1147,8 @@ impl CallRepository for PgCallRepo {
                 recording_key: row.recording_key,
                 recording_url: None,
                 channel_name: None,
+                custom_name: row.custom_name,
+                summary: None,
                 is_active: row.is_active,
                 participants,
                 transcript: Vec::new(),
@@ -1312,6 +1320,15 @@ impl CallRepository for PgCallRepo {
             edit::set_share_with_team(&mut tx, call_record_id, share_with_team).await?;
         }
 
+        if let Some(custom_name) = request.custom_name.as_deref() {
+            let custom_name = if custom_name.is_empty() {
+                None
+            } else {
+                Some(custom_name)
+            };
+            edit::set_custom_name(&mut tx, call_record_id, custom_name).await?;
+        }
+
         tx.commit().await?;
         Ok(())
     }
@@ -1328,6 +1345,14 @@ impl CallRepository for PgCallRepo {
         )
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    #[tracing::instrument(skip(self, name), err)]
+    async fn set_custom_name_if_null(&self, call_id: &Uuid, name: &str) -> Result<(), Self::Err> {
+        let mut tx = self.pool.begin().await?;
+        edit::set_custom_name_if_null(&mut tx, call_id, name).await?;
+        tx.commit().await?;
         Ok(())
     }
 }
