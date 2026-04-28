@@ -20,6 +20,9 @@ import { type Accessor, batch, createMemo, createSignal } from 'solid-js';
 import type { ActiveFilter } from './active-filter-chips';
 import { INDEX_OPTIONS } from './search-filter-controls';
 import {
+  cacheCallSubFilters,
+  cacheChannelSubFilters,
+  cacheEmailSubFilters,
   type SearchableOption,
   useSearchFilterOptions,
   useSearchIndexController,
@@ -504,10 +507,15 @@ export function useFilterRefinements() {
     const preset = currentPreset();
     if (!preset) return;
 
+    const contentId = panel.handle.content().id;
+
     batch(() => {
       soup.predicates.set(preset.clientFilters);
       queryFilters.replace(preset.filters ?? null);
       setAssigneeFilter([]);
+      cacheChannelSubFilters(contentId, {});
+      cacheCallSubFilters(contentId, {});
+      cacheEmailSubFilters(contentId, {});
     });
   };
 
