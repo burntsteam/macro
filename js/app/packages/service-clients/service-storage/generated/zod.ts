@@ -5184,7 +5184,7 @@ export const getItemsSoupResponse = zod.object({
             .describe(
               'A call record as displayed in Soup. Excludes room_name, egress_id,\nand transcript — fields that are irrelevant for the soup feed.'
             ),
-          tag: zod.enum(['callRecord']),
+          tag: zod.enum(['call']),
         }),
       ])
       .and(
@@ -6887,7 +6887,7 @@ export const postItemsSoupResponse = zod.object({
             .describe(
               'A call record as displayed in Soup. Excludes room_name, egress_id,\nand transcript — fields that are irrelevant for the soup feed.'
             ),
-          tag: zod.enum(['callRecord']),
+          tag: zod.enum(['call']),
         }),
       ])
       .and(
@@ -8234,7 +8234,7 @@ export const postItemsSoupAstResponse = zod.object({
             .describe(
               'A call record as displayed in Soup. Excludes room_name, egress_id,\nand transcript — fields that are irrelevant for the soup feed.'
             ),
-          tag: zod.enum(['callRecord']),
+          tag: zod.enum(['call']),
         }),
       ])
       .and(
