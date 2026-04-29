@@ -20,8 +20,8 @@ use uuid::Uuid;
 use crate::domain::channel_name::{NameLookup, display_name, resolve_channel_name};
 use crate::domain::models::{
     AddParticipantError, Call, CallParticipant, CallRecord, CallRecordParticipant,
-    CallRecordPreview, CallRecordPreviewData, CallRecordTranscriptSegment, EditCallRecordRequest,
-    TranscriptSegmentRequest, WithCallId,
+    CallRecordPreview, CallRecordPreviewData, CallRecordTranscriptSegment, CustomSpeakerAssignment,
+    EditCallRecordRequest, TranscriptSegmentRequest, WithCallId,
 };
 use crate::domain::ports::CallRepository;
 
@@ -884,7 +884,7 @@ impl CallRepository for PgCallRepo {
 
         let transcript = sqlx::query!(
             r#"
-            SELECT segment_id, speaker_id, diarized_speaker_id, content, started_at, ended_at, sequence_num
+            SELECT segment_id, speaker_id, diarized_speaker_id, custom_speaker, content, started_at, ended_at, sequence_num
             FROM call_record_transcripts
             WHERE call_record_id = $1
             ORDER BY sequence_num ASC
@@ -896,7 +896,7 @@ impl CallRepository for PgCallRepo {
         .into_iter()
         .map(|row| CallRecordTranscriptSegment {
             segment_id: row.segment_id,
-            speaker_id: row.speaker_id,
+            speaker_id: row.custom_speaker.unwrap_or(row.speaker_id),
             diarized_speaker_id: row.diarized_speaker_id,
             content: row.content,
             started_at: row.started_at,
@@ -1346,6 +1346,21 @@ impl CallRepository for PgCallRepo {
             edit::set_custom_name(&mut tx, call_record_id, custom_name).await?;
         }
 
+        tx.commit().await?;
+        Ok(())
+    }
+
+    #[tracing::instrument(skip(self, assignments), fields(num_assignments = assignments.len()), err)]
+    async fn patch_call_transcript_custom_speakers(
+        &self,
+        call_record_id: &Uuid,
+        assignments: &[CustomSpeakerAssignment],
+    ) -> Result<(), Self::Err> {
+        if assignments.is_empty() {
+            return Ok(());
+        }
+        let mut tx = self.pool.begin().await?;
+        edit::set_custom_speakers(&mut tx, call_record_id, assignments).await?;
         tx.commit().await?;
         Ok(())
     }

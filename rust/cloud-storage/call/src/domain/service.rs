@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use uuid::Uuid;
 
-use crate::domain::models::EditCallRecordRequest;
+use crate::domain::models::{EditCallRecordRequest, EditCallTranscriptRequest};
 
 use super::models::{
     AddParticipantError, CallActiveResponse, CallError, CallRecord, CallRecordTranscriptSegment,
@@ -902,6 +902,29 @@ impl<
 
         self.repo
             .patch_call_record(&call_id, &request)
+            .await
+            .map_err(|e| CallError::Internal(e.into()))
+    }
+
+    #[tracing::instrument(err, skip(self, request), fields(num_assignments = request.assignments.len()))]
+    async fn edit_call_transcript(
+        &self,
+        receipt: EntityAccessReceipt<EditAccessLevel>,
+        request: EditCallTranscriptRequest,
+    ) -> Result<(), CallError> {
+        let entity = receipt.entity();
+        if entity.entity_type != EntityType::Call {
+            return Err(CallError::Internal(anyhow::anyhow!(
+                "expected Call entity in receipt, got {:?}",
+                entity.entity_type
+            )));
+        }
+
+        let call_id = macro_uuid::string_to_uuid(&entity.entity_id)
+            .map_err(|_| CallError::Internal(anyhow::anyhow!("invalid call entity receipt")))?;
+
+        self.repo
+            .patch_call_transcript_custom_speakers(&call_id, &request.assignments)
             .await
             .map_err(|e| CallError::Internal(e.into()))
     }
