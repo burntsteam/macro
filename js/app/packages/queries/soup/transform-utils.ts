@@ -384,8 +384,7 @@ export const useSearchResponseItemMapper = () => {
           {
             type: 'call',
             id: result.call_id,
-            // NOTE: leave empty, the CallChannelName will fall back to the preview endpoint.
-            name: result.name ?? channelName ?? '',
+            name: result.name ?? channelName ?? blockNameToDefaultFile('call'),
             channelId: result.channel_id,
             channelName,
             ownerId: result.owner_id,
