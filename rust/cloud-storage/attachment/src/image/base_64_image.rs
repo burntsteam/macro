@@ -3,23 +3,33 @@ use base64::Engine;
 use base64::engine::general_purpose;
 use image::{DynamicImage, GenericImageView};
 use model_file_type::FileType;
+use serde::{Deserialize, Serialize};
 use webp::Encoder;
 
 const ENCODING_QUALITY: f32 = 75.0;
 const MAX_SIZE_W: u32 = 1080;
 const MAX_SIZE_H: u32 = 720;
 
-#[derive(Eq, PartialEq, Clone)]
+/// A base64-encoded image with a known format.
+///
+/// Images are optionally downscaled to fit within 1080x720 and re-encoded as
+/// WebP at 75% quality to reduce token cost when sent to an AI model.
+#[derive(Eq, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Base64Image {
     data: String,
     format: ImageFormat,
 }
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq)]
+/// Supported image formats for base64 encoding.
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ImageFormat {
+    /// WebP format.
     WebP,
+    /// JPG format (three-letter extension).
     Jpg,
+    /// JPEG format (four-letter extension).
     Jpeg,
+    /// PNG format.
     Png,
 }
 
@@ -37,8 +47,9 @@ impl TryFrom<FileType> for ImageFormat {
 }
 
 impl Base64Image {
-    pub fn compress_and_reencode(bytes: Vec<u8>) -> Result<Self, anyhow::Error> {
-        Self::make_compressed_base64_webp(bytes)
+    /// Compress and re-encode raw image bytes into a base64 WebP.
+    pub fn downscale_and_reencode(bytes: Vec<u8>) -> Result<Self, anyhow::Error> {
+        Self::make_downscaled_base64_webp(bytes)
     }
 
     pub(crate) fn try_from_string(s: &str) -> Result<Self, anyhow::Error> {
@@ -94,7 +105,7 @@ impl std::fmt::Debug for Base64Image {
 }
 
 impl Base64Image {
-    fn make_compressed_base64_webp(image_bytes: Vec<u8>) -> Result<Self, anyhow::Error> {
+    fn make_downscaled_base64_webp(image_bytes: Vec<u8>) -> Result<Self, anyhow::Error> {
         let img = image::load_from_memory(&image_bytes)?;
         let resized_img = Self::resize_if_needed(img);
         let rgb_img = resized_img.to_rgb8();
