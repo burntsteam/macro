@@ -2,10 +2,10 @@ import { createEffect, onMount, Show, Suspense } from 'solid-js';
 import { type SettingsTab, useSettingsState } from '@core/constant/SettingsState';
 import { isNativeMobilePlatform } from '@core/mobile/isNativeMobilePlatform';
 import { isMobile } from '@core/mobile/isMobile';
-import { usePermissions } from '@core/context/user';
+
 import { DEV_MODE_ENV, ENABLE_APP_STORE_QR_CODE, ENABLE_TEAMS_OVERRIDE } from '@core/constant/featureFlags';
 import { useFeatureFlag } from '@app/lib/analytics/posthog';
-import { Subscription } from './Subscription';
+
 import { MobileApp } from './MobileApp';
 import { Mcp } from './Mcp';
 import { Appearance } from './Appearance';
@@ -41,8 +41,7 @@ type SettingsPanelProps = {
 
 export function SettingsPanel(props: SettingsPanelProps) {
   const { settingsOpen, closeSettings, activeTabId, setActiveTabId } = useSettingsState();
-  const permissions = usePermissions();
-  const teamsFlag = useFeatureFlag('enable-teams-settings', { enabledOverride: ENABLE_TEAMS_OVERRIDE });
+    const teamsFlag = useFeatureFlag('enable-teams-settings', { enabledOverride: ENABLE_TEAMS_OVERRIDE });
 
   // Set up hotkey scope for settings panel
   const [attachHotkeys, settingsHotkeyScope] = useHotkeyDOMScope('settings');
@@ -66,7 +65,6 @@ export function SettingsPanel(props: SettingsPanelProps) {
     ];
     if (teamsFlag().enabled) { tabs.push({ value: 'Team', label: 'Team' }) }
     tabs.push({ value: 'Shortcuts', label: 'Shortcuts' });
-    if (permissions()?.includes('write:stripe_subscription') && !isNativeMobilePlatform()) { tabs.push({ value: 'Subscription', label: 'Subscription' }) }
     if (ENABLE_APP_STORE_QR_CODE && !isNativeMobilePlatform()) { tabs.push({ value: 'Mobile App', label: 'App' }) }
     if (!isNativeMobilePlatform()) { tabs.push({ value: 'MCP', label: 'MCP' }) }
     if (isNativeMobilePlatform() && DEV_MODE_ENV) { tabs.push({ value: 'Mobile', label: 'Mobile Dev Tools' }) }
@@ -207,9 +205,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
             <Account />
           </Suspense>
         </Show>
-        <Show when={activeTabId() === 'Subscription' && permissions()?.includes('write:stripe_subscription') && !isNativeMobilePlatform()}>
-          <Subscription />
-        </Show>
+
         <Show when={activeTabId() === 'Appearance'}>
           <Appearance />
         </Show>
