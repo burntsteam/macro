@@ -62,6 +62,15 @@ pub struct Config {
 
     /// Per-entity DB page sizes for backfill adapters.
     pub backfill_page_sizes: BackfillPageSizes,
+
+    /// DynamoDB table name backing the backfill job registry. Items carry an
+    /// `expires_at` epoch attribute that DynamoDB's TTL sweeps in the
+    /// background, so completed jobs vanish on their own.
+    pub backfill_jobs_table: String,
+
+    /// TTL applied to the `expires_at` attribute on each job record. Acts as
+    /// the GC mechanism — DynamoDB removes items shortly after this elapses.
+    pub backfill_job_ttl_seconds: u64,
 }
 
 fn parse_page_size(name: &str, default: usize) -> anyhow::Result<usize> {
@@ -132,6 +141,13 @@ impl Config {
             emails: parse_page_size("BACKFILL_EMAILS_PAGE_SIZE", DEFAULT_EMAILS_PAGE)?,
         };
 
+        let backfill_jobs_table =
+            std::env::var("BACKFILL_JOBS_TABLE").context("BACKFILL_JOBS_TABLE must be provided")?;
+        let backfill_job_ttl_seconds: u64 = std::env::var("BACKFILL_JOB_TTL_SECONDS")
+            .unwrap_or_else(|_| (24 * 60 * 60).to_string())
+            .parse()
+            .context("BACKFILL_JOB_TTL_SECONDS must be a positive integer")?;
+
         Ok(Config {
             database_url,
             database_url_readonly,
@@ -147,6 +163,8 @@ impl Config {
             worker_count,
             lexical_service_url,
             backfill_page_sizes,
+            backfill_jobs_table,
+            backfill_job_ttl_seconds,
         })
     }
 }

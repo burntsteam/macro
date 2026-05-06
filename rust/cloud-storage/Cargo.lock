@@ -9742,6 +9742,7 @@ name = "search_processing_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aws-sdk-dynamodb",
  "aws-sdk-s3",
  "aws-sdk-secretsmanager",
  "aws-sdk-sqs",
@@ -9750,6 +9751,7 @@ dependencies = [
  "comms_db_client",
  "document_sub_type",
  "email_db_client",
+ "ensure_exists",
  "futures",
  "http-body-util",
  "lexical_client",

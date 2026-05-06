@@ -1,5 +1,6 @@
 import * as aws from '@pulumi/aws';
 import * as pulumi from '@pulumi/pulumi';
+import { DynamoDBTable } from '../../packages/resources';
 import {
   config,
   getSearchEventQueue,
@@ -44,6 +45,14 @@ const opensearchStack = new pulumi.StackReference('opensearch-stack', {
   name: `macro-inc/opensearch/${stack}`,
 });
 
+const backfillJobsTable = new DynamoDBTable('search-processing-backfill-jobs', {
+  baseName: 'search-processing-backfill-jobs',
+  attributes: [{ name: 'id', type: 'S' }],
+  hashKey: 'id',
+  ttl: { attributeName: 'expires_at' },
+  tags,
+});
+
 const OPENSEARCH_URL: pulumi.Output<string> = opensearchStack
   .getOutput('domainEndpoint')
   .apply((domainEndpoint) => `https://${domainEndpoint}`);
@@ -82,6 +91,7 @@ const searchProcessingService = new SearchProcessingService(
       databaseUrlReadonlyArn,
       opensearchPasswordArn,
     ],
+    extraManagedPolicyArns: [backfillJobsTable.policy.arn],
     searchEventQueueArn,
     ecsClusterArn: cloudStorageClusterArn,
     documentStorageBucketArn,
@@ -146,6 +156,10 @@ const searchProcessingService = new SearchProcessingService(
       {
         name: ServiceUrl.LEXICAL_SERVICE_URL,
         value: getServiceUrl(ServiceUrl.LEXICAL_SERVICE_URL),
+      },
+      {
+        name: 'BACKFILL_JOBS_TABLE',
+        value: backfillJobsTable.table.name,
       },
       // OpenTelemetry / Datadog tracing configuration
       {
