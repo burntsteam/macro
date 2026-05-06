@@ -250,7 +250,7 @@ export function Account() {
                   </span>
                   <Show when={!hasPaidAccess()}>
                     <Button
-                      variant="accent"
+                      variant="active"
                       size="sm"
                       depth={3}
                       onClick={() => showPaywall()}
@@ -271,7 +271,7 @@ export function Account() {
                     when={!emailActive()}
                     fallback={
                       <Button
-                        variant="secondary"
+                        variant="base"
                         size="sm"
                         depth={3}
                         onClick={() => setShowEmailModal(true)}
@@ -282,7 +282,7 @@ export function Account() {
                   >
                     <Show when={!showEnableEmailModal()}>
                       <Button
-                        variant="secondary"
+                        variant="base"
                         size="sm"
                         depth={3}
                         onClick={() => setShowEnableEmailModal(true)}
@@ -305,7 +305,7 @@ export function Account() {
                     when={!githubLinkExists()}
                     fallback={
                       <Button
-                        variant="secondary"
+                        variant="base"
                         size="sm"
                         depth={3}
                         onClick={handleGithubDisable}
@@ -315,7 +315,7 @@ export function Account() {
                     }
                   >
                     <Button
-                      variant="secondary"
+                      variant="base"
                       size="sm"
                       depth={3}
                       onClick={handleGithubEnable}
@@ -331,7 +331,7 @@ export function Account() {
 
             <div class="flex items-center justify-end h-10 px-6">
               <Button
-                variant="secondary"
+                variant="base"
                 size="sm"
                 depth={3}
                 onClick={logoutHandler}
@@ -408,14 +408,14 @@ export function Account() {
 
             <Show when={isNativeMobilePlatform()}>
               <div class="border-t border-edge pt-4">
-                <Button variant="destructive" depth={3} onClick={() => setShowDeleteModal(true)}>
+                <Button variant="danger" depth={3} onClick={() => setShowDeleteModal(true)}>
                   Delete Account
                 </Button>
                 <Dialog
                   open={showDeleteModal()}
                   onOpenChange={setShowDeleteModal}
                   position="center"
-                  class="w-[480px]"
+                  class="w-120"
                 >
                   <Panel active depth={2}>
                     <div class="p-6 font-sans flex flex-col gap-3">
@@ -427,10 +427,10 @@ export function Account() {
                         permanent and cannot be undone.
                       </Dialog.Description>
                       <div class="pt-3 justify-end items-center gap-3 inline-flex">
-                        <Button variant="secondary" depth={3} onClick={() => setShowDeleteModal(false)}>
+                        <Button variant="base" depth={3} onClick={() => setShowDeleteModal(false)}>
                           Cancel
                         </Button>
-                        <Button variant="destructive" depth={3} onClick={() => {
+                        <Button variant="danger" depth={3} onClick={() => {
                           setShowDeleteModal(false);
                           setShowDeleteConfirmModal(true);
                         }}>
@@ -444,7 +444,7 @@ export function Account() {
                   open={showDeleteConfirmModal()}
                   onOpenChange={setShowDeleteConfirmModal}
                   position="center"
-                  class="w-[480px]"
+                  class="w-120"
                 >
                   <Panel active depth={2}>
                     <div class="p-6 font-sans flex flex-col gap-3">
@@ -456,10 +456,10 @@ export function Account() {
                         data. This cannot be undone.
                       </Dialog.Description>
                       <div class="pt-3 justify-end items-center gap-3 inline-flex">
-                        <Button variant="secondary" depth={3} onClick={() => setShowDeleteConfirmModal(false)}>
+                        <Button variant="base" depth={3} onClick={() => setShowDeleteConfirmModal(false)}>
                           Cancel
                         </Button>
-                        <Button variant="destructive" depth={3} onClick={deleteAccountHandler}>
+                        <Button variant="danger" depth={3} onClick={deleteAccountHandler}>
                           Delete My Account
                         </Button>
                       </div>
@@ -511,7 +511,7 @@ function NotificationSettings(props: {
   return (
     <Row label="Notifications">
       <Button
-        variant="secondary"
+        variant="base"
         size="sm"
         depth={3}
         onClick={handleToggle}
@@ -565,7 +565,7 @@ function BundleUpdateRow() {
               </span>
               <Show when={action()}>
                 {(a) => (
-                  <Button variant="accent" size="sm" depth={3} onClick={a().action}>
+                  <Button variant="active" size="sm" depth={3} onClick={a().action}>
                     {a().label}
                   </Button>
                 )}

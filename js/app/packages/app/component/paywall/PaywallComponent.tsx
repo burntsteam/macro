@@ -218,7 +218,7 @@ const PaywallComponent = (props: PaywallComponent) => {
           fallback={
             <Button
               onClick={handleContinue}
-              variant="secondary"
+              variant="base"
               size="lg"
               depth={3}
               class="w-full"
@@ -243,7 +243,7 @@ const PaywallComponent = (props: PaywallComponent) => {
         <Show when={!hasPaid() && props.handleGuest}>
           <Button
             onClick={() => props.handleGuest?.()}
-            variant="link"
+            variant="base"
             size="sm"
             class="mt-3 text-ink/40 hover:text-ink/60"
           >
