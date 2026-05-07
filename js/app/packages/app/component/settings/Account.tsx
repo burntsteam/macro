@@ -7,7 +7,7 @@ import { isNativeMobilePlatform } from '@core/mobile/isNativeMobilePlatform';
 import { toast } from '@core/component/Toast/Toast';
 import { staticFileIdEndpoint } from '@core/constant/servers';
 import { createStaticFile } from '@core/util/create';
-import { Dialog, Button, Panel } from '@ui';
+import { Dialog, Button, Window } from '@ui';
 import {
   blockNameToFileExtensions,
   blockNameToMimeTypes,
@@ -180,11 +180,11 @@ export function Account() {
       style="scrollbar-width: none;"
     >
       <div class="max-w-200 w-full mx-auto">
-        <Panel depth={2}>
-          <div class="text-ink">
-            <div class="relative flex items-center justify-between h-10 px-6 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-edge-muted after:content-['']">
-              <div class="text-sm font-semibold">Account</div>
-            </div>
+        <Window depth={2}>
+          <Window.Header class="px-6">
+            <div class="text-sm font-semibold">Account</div>
+          </Window.Header>
+          <Window.Body class="text-ink">
             <div class="grid gap-px bg-edge-muted border-b border-edge-muted">
               <Show when={permissions()?.includes('write:stripe_subscription') && !isNativeMobilePlatform()}>
                 <div class="bg-panel px-6 py-2">
@@ -438,28 +438,30 @@ export function Account() {
                   position="center"
                   class="w-120"
                 >
-                  <Panel active depth={2}>
-                    <div class="p-6 font-sans flex flex-col gap-3">
-                      <Dialog.Title class="text-ink text-lg font-semibold leading-7">
-                        Delete Account
-                      </Dialog.Title>
-                      <Dialog.Description class="text-ink-muted text-sm font-normal leading-tight">
-                        Are you sure you want to delete your account? This action is
-                        permanent and cannot be undone.
-                      </Dialog.Description>
-                      <div class="pt-3 justify-end items-center gap-3 inline-flex">
-                        <Button variant="base" depth={3} onClick={() => setShowDeleteModal(false)}>
-                          Cancel
-                        </Button>
-                        <Button variant="danger" depth={3} onClick={() => {
-                          setShowDeleteModal(false);
-                          setShowDeleteConfirmModal(true);
-                        }}>
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </Panel>
+                  <Window active depth={2}>
+                                      <Window.Header class="px-6">
+                                        <Dialog.Title class="text-ink text-sm font-semibold">
+                                          Delete Account
+                                        </Dialog.Title>
+                                      </Window.Header>
+                                      <Window.Body class="p-6 font-sans flex flex-col gap-3">
+                                        <Dialog.Description class="text-ink-muted text-sm font-normal leading-tight">
+                                          Are you sure you want to delete your account? This action is
+                                          permanent and cannot be undone.
+                                        </Dialog.Description>
+                                        <div class="pt-3 justify-end items-center gap-3 inline-flex">
+                                          <Button variant="base" depth={3} onClick={() => setShowDeleteModal(false)}>
+                                            Cancel
+                                          </Button>
+                                          <Button variant="danger" depth={3} onClick={() => {
+                                            setShowDeleteModal(false);
+                                            setShowDeleteConfirmModal(true);
+                                          }}>
+                                            Delete
+                                          </Button>
+                                        </div>
+                                      </Window.Body>
+                                    </Window>
                 </Dialog>
                 <Dialog
                   open={showDeleteConfirmModal()}
@@ -467,30 +469,32 @@ export function Account() {
                   position="center"
                   class="w-120"
                 >
-                  <Panel active depth={2}>
-                    <div class="p-6 font-sans flex flex-col gap-3">
-                      <Dialog.Title class="text-ink text-lg font-semibold leading-7">
-                        Are you absolutely sure?
-                      </Dialog.Title>
-                      <Dialog.Description class="text-ink-muted text-sm font-normal leading-tight">
-                        This will permanently delete your account and all associated
-                        data. This cannot be undone.
-                      </Dialog.Description>
-                      <div class="pt-3 justify-end items-center gap-3 inline-flex">
-                        <Button variant="base" depth={3} onClick={() => setShowDeleteConfirmModal(false)}>
-                          Cancel
-                        </Button>
-                        <Button variant="danger" depth={3} onClick={deleteAccountHandler}>
-                          Delete My Account
-                        </Button>
-                      </div>
-                    </div>
-                  </Panel>
+                  <Window active depth={2}>
+                                      <Window.Header class="px-6">
+                                        <Dialog.Title class="text-ink text-sm font-semibold">
+                                          Are you absolutely sure?
+                                        </Dialog.Title>
+                                      </Window.Header>
+                                      <Window.Body class="p-6 font-sans flex flex-col gap-3">
+                                        <Dialog.Description class="text-ink-muted text-sm font-normal leading-tight">
+                                          This will permanently delete your account and all associated
+                                          data. This cannot be undone.
+                                        </Dialog.Description>
+                                        <div class="pt-3 justify-end items-center gap-3 inline-flex">
+                                          <Button variant="base" depth={3} onClick={() => setShowDeleteConfirmModal(false)}>
+                                            Cancel
+                                          </Button>
+                                          <Button variant="danger" depth={3} onClick={deleteAccountHandler}>
+                                            Delete My Account
+                                          </Button>
+                                        </div>
+                                      </Window.Body>
+                                    </Window>
                 </Dialog>
               </div>
             </Show>
-          </div>
-        </Panel>
+          </Window.Body>
+        </Window>
       </div>
     </div>
   );

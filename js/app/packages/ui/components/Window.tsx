@@ -1,8 +1,8 @@
 import type { ParentProps } from 'solid-js';
 import { Show, splitProps } from 'solid-js';
 import type { PanelProps } from './Panel';
-import { Panel } from './Panel';
 import { cn } from '../utils/classname';
+import { Panel } from './Panel';
 
 /**
  * ```tsx
@@ -18,7 +18,7 @@ import { cn } from '../utils/classname';
 export type WindowProps = PanelProps;
 
 export function Window(props: WindowProps) {
-  const [local, panelProps] = splitProps(props, ['children']);
+  const [local, panelProps] = splitProps(props, ['children', 'class']);
 
   return (
     <Panel
@@ -27,7 +27,7 @@ export function Window(props: WindowProps) {
         'grid-template-rows': 'auto auto minmax(0, 1fr) auto',
         'grid-template-columns': 'minmax(0, 1fr)',
       }}
-      class="grid min-h-0 min-w-0"
+      class={cn('grid min-h-0 min-w-0', local.class)}
       {...panelProps}
     >
       {local.children}
