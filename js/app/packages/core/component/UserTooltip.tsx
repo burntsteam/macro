@@ -1,5 +1,5 @@
 import { useSplitLayout } from '@app/component/split-layout/layout';
-import { Panel } from '@ui';
+import { Surface } from '@ui';
 import { toast } from '@core/component/Toast/Toast';
 import { isOk } from '@core/util/maybeResult';
 import IconCheck from '@icon/regular/check.svg';
@@ -8,7 +8,7 @@ import WideChat from '@macro-icons/wide/chat.svg';
 import WideTask from '@macro-icons/wide/task.svg';
 import { commsServiceClient } from '@service-comms/client';
 import { useUserId } from '@core/context/user';
-import { Button } from '@ui/components/Button';
+import { Button } from '@ui';
 import { createSignal, Show } from 'solid-js';
 import { debounce } from '@solid-primitives/scheduled';
 import { UserIcon } from './UserIcon';
@@ -91,7 +91,7 @@ export function UserTooltip(props: UserTooltipProps) {
   };
 
   return (
-    <Panel depth={2} active>
+    <Surface depth={2} active>
       <div class="bg-panel text-ink box-border border-accent overflow-hidden max-w-lg">
         <div class="flex items-center gap-2 p-2">
           <UserIcon
@@ -143,6 +143,6 @@ export function UserTooltip(props: UserTooltipProps) {
           </div>
         </Show>
       </div>
-    </Panel>
+    </Surface>
   );
 }

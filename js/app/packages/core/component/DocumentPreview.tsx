@@ -3,7 +3,7 @@ import { URL_PARAMS as CHANNEL_PARAMS } from '@block-channel/constants';
 import { useOpenChatForAttachment } from '@block-chat/client';
 import { URL_PARAMS as URL_PARAMS_MD } from '@block-md/constants';
 import { URL_PARAMS as URL_PARAMS_PDF } from '@block-pdf/signal/location';
-import { cn } from '@ui/utils/classname';
+import { cn } from '@ui';
 import {
   type BlockAlias,
   type BlockName,
@@ -12,7 +12,7 @@ import {
 } from '@core/block';
 import { itemToBlockName, resolveBlockAlias } from '@core/constant/allBlocks';
 import { EntityIcon } from '@core/component/EntityIcon';
-import { Panel } from '@ui';
+import { Surface } from '@ui';
 import { toast } from '@core/component/Toast/Toast';
 import {
   isAccessiblePreviewItem,
@@ -718,7 +718,7 @@ export function PopupPreview(props: {
       onMouseEnter={props.mouseEnter}
       onMouseLeave={props.mouseLeave}
     >
-      <Panel active depth={3}>
+      <Surface active depth={3}>
         <Switch>
           {/* Loading state */}
           <Match when={item().loading}>
@@ -903,7 +903,7 @@ export function PopupPreview(props: {
             )}
           </Match>
         </Switch>
-      </Panel>
+      </Surface>
     </div>
   );
 }
