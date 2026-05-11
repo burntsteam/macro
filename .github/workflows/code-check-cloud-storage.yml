@@ -230,7 +230,12 @@ jobs:
         ports:
           - 5432:5432
         # needed because the postgres container does not provide a healthcheck
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --shm-size 1g
       redis:
         image: redis:7
         ports:
@@ -276,11 +281,19 @@ jobs:
             exit 1
           fi
 
-          docker exec "$postgres_container" psql -U user -d macrodb -c "ALTER SYSTEM SET max_locks_per_transaction = 256;"
+          docker exec -i "$postgres_container" psql -U user -d macrodb <<'SQL'
+          ALTER SYSTEM SET fsync = off;
+          ALTER SYSTEM SET synchronous_commit = off;
+          ALTER SYSTEM SET full_page_writes = off;
+          ALTER SYSTEM SET max_wal_size = '4GB';
+          ALTER SYSTEM SET checkpoint_timeout = '30min';
+          ALTER SYSTEM SET max_locks_per_transaction = 8192;
+          SQL
           docker restart "$postgres_container"
           until docker exec "$postgres_container" pg_isready -U user -d macrodb; do
             sleep 1
           done
+          docker exec "$postgres_container" psql -U user -d macrodb -c "SHOW max_locks_per_transaction;"
       - name: prepare tests
         run: just rust/cloud-storage/setup_test_envs && just rust/cloud-storage/initialize_dbs
       - name: run tests
