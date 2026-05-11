@@ -572,8 +572,8 @@ impl CallRepository for PgCallRepo {
         // Copy transcripts to call_record_transcripts.
         sqlx::query!(
             r#"
-            INSERT INTO call_record_transcripts (call_record_id, segment_id, speaker_id, diarized_speaker_id, content, started_at, ended_at, sequence_num)
-            SELECT $1, segment_id, speaker_id, diarized_speaker_id, content, started_at, ended_at, sequence_num
+            INSERT INTO call_record_transcripts (call_record_id, segment_id, speaker_id, diarized_speaker_id, content, started_at, ended_at, sequence_num, voice_id)
+            SELECT $1, segment_id, speaker_id, diarized_speaker_id, content, started_at, ended_at, sequence_num, voice_id
             FROM call_transcripts
             WHERE call_id = $2
             "#,
@@ -692,11 +692,12 @@ impl CallRepository for PgCallRepo {
         &self,
         call_id: &Uuid,
         segment: &TranscriptSegmentRequest,
+        voice_id: Option<Uuid>,
     ) -> Result<(), Self::Err> {
         sqlx::query!(
             r#"
-            INSERT INTO call_transcripts (call_id, segment_id, speaker_id, diarized_speaker_id, content, started_at, ended_at, sequence_num)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, (
+            INSERT INTO call_transcripts (call_id, segment_id, speaker_id, diarized_speaker_id, content, started_at, ended_at, voice_id, sequence_num)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (
                 SELECT COALESCE(MAX(sequence_num), 0) + 1
                 FROM call_transcripts
                 WHERE call_id = $1
@@ -710,6 +711,7 @@ impl CallRepository for PgCallRepo {
             segment.content,
             segment.started_at,
             segment.ended_at,
+            voice_id,
         )
         .execute(&self.pool)
         .await?;
@@ -1341,6 +1343,59 @@ impl CallRepository for PgCallRepo {
         let mut tx = self.pool.begin().await?;
         edit::set_custom_speakers(&mut tx, call_record_id, assignments).await?;
         tx.commit().await?;
+        Ok(())
+    }
+
+    #[tracing::instrument(err, skip(self))]
+    async fn get_distinct_voice_speakers_for_call_record(
+        &self,
+        call_record_id: &Uuid,
+    ) -> Result<Vec<(String, Uuid)>, Self::Err> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT DISTINCT diarized_speaker_id AS "diarized_speaker_id!", voice_id AS "voice_id!"
+            FROM call_record_transcripts
+            WHERE call_record_id = $1
+              AND diarized_speaker_id IS NOT NULL
+              AND voice_id IS NOT NULL
+            "#,
+            call_record_id,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| (r.diarized_speaker_id, r.voice_id))
+            .collect())
+    }
+
+    #[tracing::instrument(skip(self, assignments), fields(num_assignments = assignments.len()), err)]
+    async fn patch_call_transcript_speakers_from_voice_match(
+        &self,
+        call_record_id: &Uuid,
+        assignments: &[(String, Uuid)],
+    ) -> Result<(), Self::Err> {
+        if assignments.is_empty() {
+            return Ok(());
+        }
+        let diarized_ids: Vec<&str> = assignments.iter().map(|(d, _)| d.as_str()).collect();
+        let user_ids: Vec<Uuid> = assignments.iter().map(|(_, u)| *u).collect();
+        sqlx::query!(
+            r#"
+            UPDATE call_record_transcripts AS t
+            SET custom_speaker = u.id
+            FROM UNNEST($2::text[], $3::uuid[]) AS a(diarized_speaker_id, macro_user_id)
+            JOIN "User" u ON u.macro_user_id = a.macro_user_id
+            WHERE t.call_record_id = $1
+              AND t.diarized_speaker_id = a.diarized_speaker_id
+              AND t.custom_speaker IS NULL
+            "#,
+            call_record_id,
+            &diarized_ids as &[&str],
+            &user_ids,
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
