@@ -257,6 +257,7 @@ export const TOKENS = {
     threadReply: 'channel.threadReply',
     threadEditReply: 'channel.threadEditReply',
     threadDeleteReply: 'channel.threadDeleteReply',
+    findInChannel: 'channel.findInChannel',
   },
 
   // drawer
