@@ -8,12 +8,12 @@ import {
   getEntityValues,
   getSelectValues,
 } from '@core/component/Properties/utils';
-import { Tooltip } from '@core/component/Tooltip';
 import { UserGroup } from '@core/component/UserGroup';
 import { UserIcon } from '@core/component/UserIcon';
 import { tryMacroId, useDisplayNameParts } from '@core/user';
 import CaretDownIcon from '@icon/regular/caret-down.svg';
 import CircleDashedEmpty from '@icon/regular/circle-dashed.svg';
+import { HoverCard } from '@ui';
 import { cn } from '@ui/utils/classname';
 import { type Component, Show } from 'solid-js';
 import './list-property-value.css';
@@ -97,9 +97,9 @@ const ListSelectValue: Component<{ property: Property }> = (props) => {
   };
 
   return (
-    <Tooltip
+    <HoverCard
       unstyled
-      tooltip={<PropertyTooltip property={props.property} />}
+      content={<PropertyTooltip property={props.property} />}
       class="list-property-cell flex items-center min-w-0"
     >
       <button
@@ -131,7 +131,7 @@ const ListSelectValue: Component<{ property: Property }> = (props) => {
           <CaretDownIcon class="size-3 shrink-0 @max-[840px]/u-list:hidden" />
         </Show>
       </button>
-    </Tooltip>
+    </HoverCard>
   );
 };
 
@@ -194,9 +194,9 @@ const ListEntityValue: Component<{ property: Property }> = (props) => {
   const isSingleUser = () => isUser() && entities().length === 1;
 
   return (
-    <Tooltip
+    <HoverCard
       unstyled
-      tooltip={<PropertyTooltip property={props.property} />}
+      content={<PropertyTooltip property={props.property} />}
       class="list-property-cell flex items-center min-w-0"
     >
       <button
@@ -243,6 +243,6 @@ const ListEntityValue: Component<{ property: Property }> = (props) => {
           <CaretDownIcon class="size-3 shrink-0 @max-[840px]/u-list:hidden" />
         </Show>
       </button>
-    </Tooltip>
+    </HoverCard>
   );
 };

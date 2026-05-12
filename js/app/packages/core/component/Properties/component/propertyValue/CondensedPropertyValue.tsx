@@ -1,7 +1,6 @@
 import { getSelectValues } from '@core/component/Properties/utils';
-import { Tooltip } from '@core/component/Tooltip';
 import CircleDashedEmpty from '@icon/regular/circle-dashed.svg';
-import { cn } from '@ui';
+import { cn, HoverCard } from '@ui';
 import type { Component, JSX } from 'solid-js';
 import { Show } from 'solid-js';
 import type { Property } from '../../types';
@@ -47,9 +46,9 @@ export const CondensedPropertyValue: Component<CondensedPropertyValueProps> = (
   };
 
   return (
-    <Tooltip
+    <HoverCard
       unstyled
-      tooltip={<PropertyTooltip property={props.property} />}
+      content={<PropertyTooltip property={props.property} />}
       class="flex items-center"
     >
       <div
@@ -66,7 +65,7 @@ export const CondensedPropertyValue: Component<CondensedPropertyValueProps> = (
       >
         <CondensedIcon property={props.property} />
       </div>
-    </Tooltip>
+    </HoverCard>
   );
 };
 

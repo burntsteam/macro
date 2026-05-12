@@ -1,5 +1,4 @@
 import { GO_TO_COMMAND_SCOPE, GO_TO_LEADER_KEY } from '@app/constants/hotkeys';
-import { Tooltip } from '@core/component/Tooltip';
 import { createHotkeyGroup, registerHotkey } from '@core/hotkey/hotkeys';
 import type { ValidHotkey } from '@core/hotkey/types';
 import MacroIcon from '@macro-icons/macro-logo.svg';
@@ -12,7 +11,7 @@ import { AnimatedGearIcon } from '@macro-icons/wide/animating/gear';
 import { AnimatedPlusIcon } from '@macro-icons/wide/animating/plus';
 import { AnimatedStarIcon } from '@macro-icons/wide/animating/star';
 import { AnimatedTaskIcon } from '@macro-icons/wide/animating/task';
-import { cn } from '@ui';
+import { cn, HoverCard } from '@ui';
 import {
   createSignal,
   For,
@@ -227,8 +226,8 @@ export function MockAppChrome(props: MockAppChromeProps) {
                 return 'text-ink opacity-50 hover:opacity-80 hover:bg-ink/10';
               };
               return (
-                <Tooltip
-                  tooltip={
+                <HoverCard
+                  content={
                     <span class="flex items-center gap-1.5 text-xs">
                       {link.label}
                       <span class="flex items-center gap-1 text-ink/40">
@@ -259,7 +258,7 @@ export function MockAppChrome(props: MockAppChromeProps) {
                       <Dynamic component={link.icon} class="size-4" />
                     )}
                   </button>
-                </Tooltip>
+                </HoverCard>
               );
             }}
           </For>
