@@ -1440,6 +1440,52 @@ impl CallRepository for PgCallRepo {
         Ok(())
     }
 
+    /// Return stable `(macro_user_id, voice_id)` pairs for one archived call.
+    ///
+    /// `call_record_id` scopes the scan to a single call's archived transcript rows.
+    /// A speaker is returned only when every row for that `speaker_id` has the
+    /// same non-NULL `voice_id`; ambiguous, missing, or unresolved speakers are
+    /// skipped. The returned `macro_user_id` is the user's canonical
+    /// `macro_user.id`, suitable for linking to `voice_id` in `macro_user_voice`.
+    #[tracing::instrument(err, skip(self))]
+    async fn get_stable_speaker_voices_for_call_record(
+        &self,
+        call_record_id: &Uuid,
+    ) -> Result<Vec<(Uuid, Uuid)>, Self::Err> {
+        let rows = sqlx::query!(
+            r#"
+            WITH per_speaker AS (
+                SELECT
+                    u.macro_user_id,
+                    COUNT(*) AS total_segments,
+                    COUNT(t.voice_id) AS voiced_segments,
+                    COUNT(DISTINCT t.voice_id) AS distinct_voice_ids,
+                    (array_agg(DISTINCT t.voice_id) FILTER (WHERE t.voice_id IS NOT NULL))[1] AS voice_id,
+                    MIN(t.sequence_num) AS first_sequence_num
+                FROM call_record_transcripts t
+                JOIN "User" u
+                  ON u.id = t.speaker_id
+                 AND u.macro_user_id IS NOT NULL
+                WHERE t.call_record_id = $1
+                GROUP BY t.speaker_id, u.macro_user_id
+            )
+            SELECT macro_user_id AS "macro_user_id!", voice_id AS "voice_id!"
+            FROM per_speaker
+            WHERE total_segments = voiced_segments
+              AND distinct_voice_ids = 1
+            ORDER BY first_sequence_num ASC
+            "#,
+            call_record_id,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| (row.macro_user_id, row.voice_id))
+            .collect())
+    }
+
     #[tracing::instrument(err, skip(self))]
     async fn get_distinct_voice_speakers_for_call_record(
         &self,
