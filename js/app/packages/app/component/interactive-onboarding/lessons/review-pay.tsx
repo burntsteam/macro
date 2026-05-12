@@ -359,7 +359,7 @@ async function createPendingTeamOnReturn(): Promise<boolean> {
 
     if (invites.length > 0) {
       await throwOnErr(() =>
-        authServiceClient.inviteToTeam(team.id, { invites })
+        authServiceClient.inviteToTeam({ invites })
       );
     }
 
