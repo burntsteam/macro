@@ -31,7 +31,6 @@ jobs:
               - 'js/lexical-core/**'
               - 'js/lexical-service/**'
               - '.github/actions/setup-cachix/**'
-              - '.github/actions/setup-nix-dev-shell/**'
               - '.github/actions/setup-reqs-web/**'
               - '.github/workflows/web-app-check-main.yml'
             api_changed:
@@ -43,7 +42,6 @@ jobs:
               - 'js/app/scripts/generate-api-schema.ts'
               - 'js/app/scripts/services.ts'
               - '.github/actions/setup-cachix/**'
-              - '.github/actions/setup-nix-dev-shell/**'
               - '.github/actions/setup-reqs-web/**'
               - '.github/workflows/web-app-check-main.yml'
 
@@ -52,7 +50,7 @@ jobs:
     # Run the type check if rust code or frontend code has changed.
     if: needs.path-check.outputs.should_run == 'true' || needs.path-check.outputs.api_changed == 'true'
     name: Typecheck
-    runs-on: temp-middy
+    runs-on: linux-extra-beefy
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
@@ -107,16 +105,17 @@ jobs:
     needs: path-check
     if: needs.path-check.outputs.should_run == 'true'
     name: Biome Check
-    runs-on: temp-middy
+    runs-on: linux-latest-middy
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Setup Nix dev shell
-        uses: ./.github/actions/setup-nix-dev-shell
+        uses: ./.github/actions/setup-cachix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          dev-shell: 'true'
       - name: Run Biome
         working-directory: js/app
         run: biome ci --changed --no-errors-on-unmatched --error-on-warnings
@@ -125,7 +124,7 @@ jobs:
     needs: path-check
     if: needs.path-check.outputs.should_run == 'true'
     name: Theme Hygiene Inspector
-    runs-on: temp-middy
+    runs-on: linux-latest-middy
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
@@ -143,7 +142,7 @@ jobs:
     needs: path-check
     if: needs.path-check.outputs.should_run == 'true'
     name: Test
-    runs-on: temp-middy
+    runs-on: linux-latest-middy
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
@@ -160,14 +159,15 @@ jobs:
     needs: path-check
     if: needs.path-check.outputs.should_run == 'true'
     name: Cycles Import Check
-    runs-on: temp-middy
+    runs-on: linux-latest-middy
     steps:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Setup Nix dev shell
-        uses: ./.github/actions/setup-nix-dev-shell
+        uses: ./.github/actions/setup-cachix
         with:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          dev-shell: 'true'
       - name: Cycles Import Check
         working-directory: js/app
         run: biome lint --changed --no-errors-on-unmatched --only=suspicious/noImportCycles
@@ -176,7 +176,7 @@ jobs:
     needs: path-check
     if: needs.path-check.outputs.should_run == 'true'
     name: Build
-    runs-on: temp-middy
+    runs-on: linux-latest-middy
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v6
