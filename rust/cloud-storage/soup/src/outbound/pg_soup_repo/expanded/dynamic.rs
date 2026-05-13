@@ -438,6 +438,9 @@ fn build_project_filter(ast: Option<&Expr<ProjectLiteral>>) -> String {
         filter_ast::ExprFrame::Literal(ProjectLiteral::ProjectId(p)) => {
             format!(r#"p."parentId" = '{p}'"#)
         }
+        filter_ast::ExprFrame::Literal(ProjectLiteral::ProjectIdSelf(p)) => {
+            format!(r#"p.id = '{p}'"#)
+        }
         filter_ast::ExprFrame::Literal(ProjectLiteral::Owner(o)) => {
             format!(r#"p."userId" = '{o}'"#)
         }
