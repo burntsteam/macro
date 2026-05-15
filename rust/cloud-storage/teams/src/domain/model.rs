@@ -6,6 +6,51 @@ use chrono::{DateTime, Utc};
 use macro_user_id::{email::Email, lowercased::Lowercase, user_id::MacroUserIdStr};
 use roles_and_permissions::domain::model::UserRolesAndPermissionsError;
 
+/// Team plans
+#[derive(
+    Eq,
+    PartialEq,
+    Debug,
+    Clone,
+    PartialOrd,
+    Copy,
+    std::cmp::Ord,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[cfg_attr(feature = "axum", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "outbound", derive(sqlx::Type))]
+#[cfg_attr(
+    feature = "outbound",
+    sqlx(type_name = "\"team_plan\"", rename_all = "snake_case")
+)]
+#[serde(rename_all = "snake_case")]
+pub enum TeamPlan {
+    /// Idea team plan
+    Idea,
+    /// Pre-seed team plan
+    PreSeed,
+    /// Seed team plan
+    Seed,
+    /// Series A team plan
+    SeriesA,
+    /// Growth team plan
+    Growth,
+}
+
+impl TeamPlan {
+    /// Get the seat cap associated with a team plan
+    pub fn seat_cap(&self) -> i32 {
+        match self {
+            TeamPlan::Idea => 3,
+            TeamPlan::PreSeed => 6,
+            TeamPlan::Seed => 10,
+            TeamPlan::SeriesA => 25,
+            TeamPlan::Growth => i32::MAX,
+        }
+    }
+}
+
 #[derive(
     Eq,
     PartialEq,
@@ -95,6 +140,14 @@ pub struct PatchTeamRequest {
     pub name: Option<String>,
     /// Role updates to apply to team users
     pub user_role_updates: Option<Vec<PatchTeamUserRole>>,
+}
+
+/// Request to update the team plan
+#[derive(Debug, serde::Deserialize)]
+#[cfg_attr(feature = "axum", derive(utoipa::ToSchema))]
+pub struct PatchTeamPlanRequest {
+    /// The new team plan
+    pub team_plan: TeamPlan,
 }
 
 /// Request to update a team user's role

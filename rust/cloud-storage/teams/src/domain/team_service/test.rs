@@ -37,7 +37,7 @@ use crate::domain::{
     model::{
         AcceptedTeamInvite, CreateSubscriptionArgs, CustomerError, PatchTeamRequest,
         PatchTeamUserRole, RemoveTeamInviteError, RemoveUserFromTeamError, Team, TeamError,
-        TeamInvite, TeamInviteDetails, TeamMember, TeamRole, TeamWithMembers,
+        TeamInvite, TeamInviteDetails, TeamMember, TeamPlan, TeamRole, TeamWithMembers,
     },
     team_repo::{TeamChannelsRepository, TeamRepository},
 };
@@ -330,6 +330,28 @@ impl TeamRepository for MockTeamRepository {
         ));
         async { Ok(()) }
     }
+
+    fn get_team_seat_count(
+        &self,
+        _: &uuid::Uuid,
+    ) -> impl Future<Output = Result<i32, TeamError>> + Send {
+        async { unimplemented!() }
+    }
+
+    fn get_team_plan(
+        &self,
+        _: &uuid::Uuid,
+    ) -> impl Future<Output = Result<Option<TeamPlan>, TeamError>> + Send {
+        async { unimplemented!() }
+    }
+
+    fn patch_team_plan(
+        &self,
+        _: &uuid::Uuid,
+        _: TeamPlan,
+    ) -> impl Future<Output = Result<(), TeamError>> + Send {
+        async { unimplemented!() }
+    }
 }
 
 // -- Mock CustomerRepository --
@@ -364,6 +386,15 @@ impl CustomerRepository for MockCustomerRepository {
     fn cancel_subscription(
         &self,
         _: &stripe::SubscriptionId,
+    ) -> impl Future<Output = Result<(), CustomerError>> + Send {
+        async { unimplemented!() }
+    }
+
+    fn update_team_plan(
+        &self,
+        _subscription_id: &stripe::SubscriptionId,
+        _current_team_plan: Option<TeamPlan>,
+        _team_plan: TeamPlan,
     ) -> impl Future<Output = Result<(), CustomerError>> + Send {
         async { unimplemented!() }
     }

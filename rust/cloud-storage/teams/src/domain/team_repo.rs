@@ -9,9 +9,9 @@ use macro_user_id::{email::Email, lowercased::Lowercase, user_id::MacroUserIdStr
 
 use crate::domain::model::{
     AcceptedTeamInvite, CreateTeamError, DeleteTeamError, InviteUsersToTeamError, JoinTeamError,
-    PatchTeamRequest, RemoveTeamInviteError, RemoveUserFromTeamError,
+    PatchTeamPlanRequest, PatchTeamRequest, RemoveTeamInviteError, RemoveUserFromTeamError,
     RestorePermissionsForTeamMembersError, RevokePermissionsForTeamMembersError, Team, TeamError,
-    TeamInvite, TeamInviteDetails, TeamMember, TeamRole, TeamWithMembers,
+    TeamInvite, TeamInviteDetails, TeamMember, TeamPlan, TeamRole, TeamWithMembers,
 };
 
 /// The TeamChannelsRepository defines a set of actions related to team channels
@@ -209,6 +209,25 @@ pub trait TeamRepository: Clone + Send + Sync + 'static {
         user_id: &MacroUserIdStr<'_>,
         team_role: TeamRole,
     ) -> impl Future<Output = Result<(), TeamError>> + Send;
+
+    /// Get the teams current seat count
+    fn get_team_seat_count(
+        &self,
+        team_id: &uuid::Uuid,
+    ) -> impl Future<Output = Result<i32, TeamError>> + Send;
+
+    /// Gets the teams current plan
+    fn get_team_plan(
+        &self,
+        team_id: &uuid::Uuid,
+    ) -> impl Future<Output = Result<Option<TeamPlan>, TeamError>> + Send;
+
+    /// Patches the teams current plan
+    fn patch_team_plan(
+        &self,
+        team_id: &uuid::Uuid,
+        team_plan: TeamPlan,
+    ) -> impl Future<Output = Result<(), TeamError>> + Send;
 }
 
 /// The TeamService defines a set of actions to perform on the teams
@@ -317,4 +336,11 @@ pub trait TeamService: Clone + Send + Sync + 'static {
     ) -> impl Future<
         Output = Result<HashSet<roles_and_permissions::domain::model::PermissionId>, TeamError>,
     > + Send;
+
+    /// Updates the teams plan
+    fn update_team_plan(
+        &self,
+        entity_access_receipt: EntityAccessReceipt<OwnerTeamRole>,
+        req: &PatchTeamPlanRequest,
+    ) -> impl Future<Output = Result<(), TeamError>> + Send;
 }

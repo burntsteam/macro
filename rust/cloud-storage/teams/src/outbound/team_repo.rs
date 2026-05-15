@@ -3,7 +3,7 @@ use crate::domain::{
     model::{
         AcceptedTeamInvite, CreateTeamError, InviteUsersToTeamError, PatchTeamRequest,
         RemoveTeamInviteError, RemoveUserFromTeamError, Team, TeamError, TeamInvite,
-        TeamInviteDetails, TeamInviteSnapshot, TeamMember, TeamRole, TeamWithMembers,
+        TeamInviteDetails, TeamInviteSnapshot, TeamMember, TeamPlan, TeamRole, TeamWithMembers,
     },
     team_repo::TeamRepository,
 };
@@ -93,8 +93,8 @@ impl TeamRepositoryImpl {
 
         let team = sqlx::query!(
             r#"
-            INSERT INTO team (id, name, owner_id)
-            VALUES ($1, $2, $3)
+            INSERT INTO team (id, name, owner_id, seat_count)
+            VALUES ($1, $2, $3, 1)
             RETURNING id, name, owner_id
             "#,
             &id,
@@ -1071,6 +1071,65 @@ impl TeamRepository for TeamRepositoryImpl {
 
         if result.rows_affected() == 0 {
             return Err(TeamError::TeamMemberNotFound(*team_id));
+        }
+
+        Ok(())
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    async fn get_team_seat_count(&self, team_id: &uuid::Uuid) -> Result<i32, TeamError> {
+        let seat_count = sqlx::query!(
+            r#"
+            SELECT seat_count
+            FROM team
+            WHERE id = $1
+            "#,
+            team_id,
+        )
+        .map(|row| row.seat_count)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(seat_count)
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    async fn get_team_plan(&self, team_id: &uuid::Uuid) -> Result<Option<TeamPlan>, TeamError> {
+        let plan = sqlx::query!(
+            r#"
+            SELECT plan as "plan?: TeamPlan"
+            FROM team
+            WHERE id = $1
+            "#,
+            team_id,
+        )
+        .map(|row| row.plan)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(plan)
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    async fn patch_team_plan(
+        &self,
+        team_id: &uuid::Uuid,
+        team_plan: TeamPlan,
+    ) -> Result<(), TeamError> {
+        let result = sqlx::query!(
+            r#"
+            UPDATE team
+            SET plan = $2
+            WHERE id = $1
+            "#,
+            team_id,
+            team_plan as _,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(TeamError::TeamDoesNotExist);
         }
 
         Ok(())
