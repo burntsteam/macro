@@ -1486,7 +1486,7 @@ fn build_grouped_query<'a>(
 
     match &grouping.field {
         GroupByField::Date => {
-            builder.push(date_bucket_sql_order("\"sort_ts\""));
+            builder.push(date_bucket_sql_order("sort_ts"));
         }
         _ => {
             builder.push("\"group_key\"");
