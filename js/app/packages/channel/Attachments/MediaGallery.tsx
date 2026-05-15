@@ -16,8 +16,8 @@ export function MediaGallery(props: {
   const hasMedia = () => props.items.length > 0;
 
   return (
-    <AttachmentSection label="Photos and videos">
-      <div class="grid p-3">
+    <AttachmentSection label="Photos and Videos">
+      <div class="grid py-2 px-6">
         <Show when={!hasMedia()}>
           <div class="py-3 text-sm text-ink-faint">
             No photos or videos in this channel yet.
@@ -26,13 +26,11 @@ export function MediaGallery(props: {
 
         <Show when={hasMedia()}>
           <div>
-            <div
-              aria-label="Photos and videos gallery"
-              class="flex flex-row flex-wrap gap-1.5"
-            >
+            <div aria-label="Photos and videos gallery">
               <MediaGrid
                 items={props.items}
                 variant="attachments"
+                class="justify-center"
                 onOpen={(index) => {
                   setLightboxIndex(index);
                   setViewerOpen(true);

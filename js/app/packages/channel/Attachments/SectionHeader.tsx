@@ -11,7 +11,7 @@ export function AttachmentSection(props: {
 }) {
   return (
     <Panel depth={2} class={cn('h-auto', props.class)}>
-      <Panel.Header class="justify-between">
+      <Panel.Header class="justify-between px-6">
         <h3 class="text-sm font-medium text-ink">{props.label}</h3>
         <div class="shrink-0">{props.action}</div>
       </Panel.Header>
@@ -28,9 +28,10 @@ export function LoadMoreButton(props: {
 }) {
   return (
     <Button
-      variant="ghost"
+      variant="base"
       size="sm"
-      class="w-full"
+      depth={4}
+      class="justify-self-center mt-2 bg-surface"
       onClick={() => props.onLoadMore()}
       disabled={props.isFetching()}
     >
@@ -43,7 +44,7 @@ export function LoadMoreButton(props: {
           </>
         }
       >
-        Load more
+        Load More
       </Show>
     </Button>
   );
