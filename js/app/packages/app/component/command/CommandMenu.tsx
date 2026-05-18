@@ -168,6 +168,7 @@ export function CommandMenuInner(props: {
 
     if (isCommandItem(item)) {
       const command = item.data;
+      trackCommandUsage(item.id);
 
       // Check if this is a multi-stage command
       if (command.activateCommandScopeId) {
@@ -188,7 +189,6 @@ export function CommandMenuInner(props: {
       }
 
       // Regular command - close and run
-      trackCommandUsage(item.id);
       CommandState.close();
       CommandState.setQuery('');
       runCommand(command);
