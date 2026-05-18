@@ -40,19 +40,19 @@ import {
   type MaybeResult,
 } from '@core/util/maybeResult';
 import { buildSimpleEntityUrl } from '@core/util/url';
-import ChevronDownIcon from '@icon/caret-down.svg';
-import CheckIcon from '@icon/check.svg';
-import IconLink from '@icon/link.svg';
-import IconShared from '@icon/share.svg';
-import IconX from '@icon/x.svg';
+import IconComment from '@icon/wide-comment.svg';
+import WideCopy from '@icon/wide-copy.svg';
+import IconEdit from '@icon/wide-edit.svg';
+import IconEye from '@icon/wide-eye.svg';
+import UserCircle from '@icon/wide-user-circle.svg';
+import WideUsers from '@icon/wide-users.svg';
 import { Dialog } from '@kobalte/core/dialog';
 import { DropdownMenu } from '@kobalte/core/dropdown-menu';
-import IconComment from '@macro-icons/wide/comment.svg';
-import WideCopy from '@macro-icons/wide/copy.svg';
-import IconEdit from '@macro-icons/wide/edit.svg';
-import IconEye from '@macro-icons/wide/eye.svg';
-import UserCircle from '@macro-icons/wide/user-circle.svg';
-import WideUsers from '@macro-icons/wide/users.svg';
+import ChevronDownIcon from '@phosphor/caret-down.svg';
+import CheckIcon from '@phosphor/check.svg';
+import IconLink from '@phosphor/link.svg';
+import IconShared from '@phosphor/share.svg';
+import IconX from '@phosphor/x.svg';
 import { cognitionApiServiceClient } from '@service-cognition/client';
 import { commsServiceClient } from '@service-comms/client';
 import {
