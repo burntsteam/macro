@@ -74,6 +74,10 @@ import { Resize } from '@core/component/Resize';
 import { UserIcon } from '@core/component/UserIcon';
 import { ENABLE_UNIFIED_LIST_AI_INPUT } from '@core/constant/featureFlags';
 import { useUserId } from '@core/context/user';
+import {
+  soupListContainerAttribute,
+  soupListContainerSelector,
+} from '@core/dom-selectors';
 import { registerHotkey, useHotkeyDOMScope } from '@core/hotkey/hotkeys';
 import { TOKENS } from '@core/hotkey/tokens';
 import { isMobile } from '@core/mobile/isMobile';
@@ -456,7 +460,7 @@ export const SoupView = (props: SoupViewProps) => {
         disableLocalSearch={props.disableLocalSearch}
         additionalEntities={props.additionalEntities}
       >
-        <div class="size-full flex flex-col">
+        <div class="size-full flex flex-col" data-list-view={activeListView()}>
           <div class="flex flex-col w-full">
             <SplitHeaderLeft>
               <div
@@ -1374,7 +1378,7 @@ export const SoupViewList = (props: SoupViewListProps) => {
                           const listEl = localEntityListRef();
                           if (!listEl) return undefined;
                           const scrollContainer = listEl.querySelector(
-                            '[data-soup-list-container]'
+                            soupListContainerSelector
                           ) as HTMLElement;
                           return scrollContainer || undefined;
                         }}
@@ -1485,7 +1489,7 @@ const SoupList = (props: SoupListProps) => {
         itemSize={itemSize()}
         bufferSize={overscan() * itemSize()}
         onScroll={handleScroll}
-        data-soup-list-container
+        {...soupListContainerAttribute}
       >
         {(row, i) => props.children(row, i)}
       </VList>
