@@ -34,7 +34,6 @@ import { AnimatedCommandIcon } from '@icon/wide-command';
 import { AnimatedEmailIcon } from '@icon/wide-email';
 import { AnimatedFileMdIcon } from '@icon/wide-fileMd';
 import { AnimatedFolderIcon } from '@icon/wide-folder';
-import { AnimatedGearIcon } from '@icon/wide-gear';
 import { AnimatedInboxIcon } from '@icon/wide-inbox';
 import { AnimatedNewSplitIcon } from '@icon/wide-newSplit';
 import { AnimatedPlusIcon } from '@icon/wide-plus';
@@ -45,6 +44,9 @@ import { AnimatedTaskIcon } from '@icon/wide-task';
 import { ContextMenu } from '@kobalte/core/context-menu';
 import { useNotificationSettings } from '@notifications';
 import BellIcon from '@phosphor/bell.svg';
+import DeviceMobileIcon from '@phosphor/device-mobile-speaker.svg';
+import PaintBucketIcon from '@phosphor/paint-bucket.svg';
+import UsersThreeIcon from '@phosphor/users-three.svg';
 import { debounce } from '@solid-primitives/scheduled';
 import { useLocation } from '@solidjs/router';
 import { Button, cn, Hotkey } from '@ui';
@@ -379,6 +381,16 @@ type SidebarActionButtonProps = {
   label: string;
 };
 
+const KeyboardShortcutsIcon = (props: { triggerAnimation?: boolean }) => (
+  <AnimatedCommandIcon triggerAnimation={props.triggerAnimation} />
+);
+
+const AppearanceSettingsIcon = () => <PaintBucketIcon class="size-4" />;
+
+const AccountTeamSettingsIcon = () => <UsersThreeIcon class="size-4" />;
+
+const MobileMcpsSettingsIcon = () => <DeviceMobileIcon class="size-4" />;
+
 /**
  * A normalised action button for the sidebar footer area.
  *
@@ -397,7 +409,7 @@ const SidebarActionButton = (props: SidebarActionButtonProps) => {
   return (
     <Button
       class={cn(
-        'flex items-center justify-start group-data-[slim=true]/sidebar:justify-center text-sm gap-2 cursor-default w-full rounded-sm py-1 text-ink-extra-muted not-disabled:hover:bg-ink/3'
+        'flex items-center justify-start group-data-[slim=true]/sidebar:justify-center text-sm gap-2 cursor-default w-full rounded-md py-1 text-ink-extra-muted not-disabled:hover:bg-ink/3'
       )}
       variant="ghost"
       tooltipPlacement="right"
@@ -441,7 +453,7 @@ const CALLS_LINK: SidebarItem = {
 export const AppSidebar = (props: AppSidebarProps) => {
   const analytics = useAnalytics();
   const layout = useSplitLayout();
-  const { toggleSettings } = useSettingsState();
+  const { openSettings } = useSettingsState();
   const notificationSettings = useNotificationSettings();
   const callCtx = useCallContextOptional();
 
@@ -512,6 +524,31 @@ export const AppSidebar = (props: AppSidebarProps) => {
     });
   };
 
+  const openSettingsTab = (
+    tab:
+      | 'Keyboard Shortcuts'
+      | 'Appearance'
+      | 'Account & Team'
+      | 'Mobile & MCPs',
+    event?: MouseEvent
+  ) => {
+    if (event?.shiftKey) {
+      if (!(globalSplitManager()?.canAppendSplit() ?? true)) return;
+      analytics.track('split_created', { from: 'sidebar' });
+      layout.openWithSplit(
+        { type: 'component', id: 'settings' },
+        {
+          referredFrom: 'sidebar',
+          allowDuplicate: true,
+          preferNewSplit: true,
+          mergeHistory: false,
+        }
+      );
+      return;
+    }
+    openSettings(tab);
+  };
+
   const isExpanded = () => props.sidebarState === 'expanded';
   const isSlim = () => props.sidebarState === 'slim';
 
@@ -558,6 +595,36 @@ export const AppSidebar = (props: AppSidebarProps) => {
             <LogoIcon class="size-6" />
           </div>
           <div class="grow shrink-10 min-w-0" />
+          <Show when={isExpanded()}>
+            <div class="flex items-center gap-1 mr-1">
+              <Show when={showEnableNotifications()}>
+                <Button
+                  class="size-7 rounded-xs p-1 [&_svg]:size-4"
+                  label="Enable Notifications"
+                  onClick={handleEnableNotifications}
+                >
+                  <BellIcon class="size-4" />
+                </Button>
+              </Show>
+              <Button
+                class="size-7 rounded-xs p-1 [&_svg]:size-4"
+                label="New Split"
+                hotkey={TOKENS.global.createNewSplit}
+                disabled={!canCreateNewSplit()}
+                onClick={handleNewSplitClick}
+              >
+                <AnimatedNewSplitIcon />
+              </Button>
+              <Button
+                class="size-7 rounded-xs p-1 [&_svg]:size-4"
+                label="Command"
+                hotkey={TOKENS.global.commandMenu}
+                onClick={handleCommandPaletteClick}
+              >
+                <AnimatedCommandIcon />
+              </Button>
+            </div>
+          </Show>
           <Button
             class="flex items-center justify-center rounded-xs p-0.5 px-2 bg-surface [&_svg]:size-4"
             onMouseDown={(e) => {
@@ -631,53 +698,29 @@ export const AppSidebar = (props: AppSidebarProps) => {
       </div>
 
       <div class="w-full px-2 flex flex-col">
-        <Show when={showEnableNotifications()}>
-          <SidebarActionButton
-            label="Enable Notifications"
-            isSlim={isSlim}
-            onClick={handleEnableNotifications}
-            icon={() => <BellIcon class="size-4" />}
-          />
-        </Show>
         <SidebarActionButton
-          label="New Split"
-          hotkeyToken={TOKENS.global.createNewSplit}
+          label="Shortcuts"
           isSlim={isSlim}
-          onClick={handleNewSplitClick}
-          disabled={() => !canCreateNewSplit()}
-          icon={AnimatedNewSplitIcon}
+          onClick={(event) => openSettingsTab('Keyboard Shortcuts', event)}
+          icon={KeyboardShortcutsIcon}
         />
-
         <SidebarActionButton
-          label="Command"
-          hotkeyToken={TOKENS.global.commandMenu}
+          label="Appearance"
           isSlim={isSlim}
-          onClick={handleCommandPaletteClick}
-          icon={AnimatedCommandIcon}
+          onClick={(event) => openSettingsTab('Appearance', event)}
+          icon={AppearanceSettingsIcon}
         />
-
         <SidebarActionButton
-          onClick={(event) => {
-            if (event?.shiftKey) {
-              if (!(globalSplitManager()?.canAppendSplit() ?? true)) return;
-              analytics.track('split_created', { from: 'sidebar' });
-              layout.openWithSplit(
-                { type: 'component', id: 'settings' },
-                {
-                  referredFrom: 'sidebar',
-                  allowDuplicate: true,
-                  preferNewSplit: true,
-                  mergeHistory: false,
-                }
-              );
-              return;
-            }
-            toggleSettings();
-          }}
-          hotkeyToken={TOKENS.global.toggleSettings}
-          icon={AnimatedGearIcon}
-          label="Settings"
+          label="Account & Team"
           isSlim={isSlim}
+          onClick={(event) => openSettingsTab('Account & Team', event)}
+          icon={AccountTeamSettingsIcon}
+        />
+        <SidebarActionButton
+          label="Mobile & MCPs"
+          isSlim={isSlim}
+          onClick={(event) => openSettingsTab('Mobile & MCPs', event)}
+          icon={MobileMcpsSettingsIcon}
         />
       </div>
       <InviteModal />
@@ -756,7 +799,7 @@ const SidebarLink = (props: SidebarLinkProps) => {
           data-sidebar-link={props.id}
           data-active={isActive() ? '' : undefined}
           class={cn(
-            'flex items-center justify-start group-data-[slim=true]/sidebar:justify-center text-sm gap-2 cursor-default w-full rounded-sm py-1 text-ink-extra-muted not-disabled:hover:bg-ink/3',
+            'flex items-center justify-start group-data-[slim=true]/sidebar:justify-center text-sm gap-2 cursor-default w-full rounded-md py-1 text-ink-extra-muted not-disabled:hover:bg-ink/3',
             isActive() && 'bg-ink/6 not-disabled:hover:bg-ink/6 text-ink'
           )}
           tooltipPlacement="right"
