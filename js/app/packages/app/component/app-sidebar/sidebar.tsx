@@ -19,7 +19,7 @@ import { useHotkeyInterceptor } from '@app/signal/hotkeyRoot';
 import { globalSplitManager } from '@app/signal/splitLayout';
 import { InCallPanel } from '@channel/Call';
 import { useCallContextOptional } from '@channel/Call/CallContext';
-import { ContextMenuContent, MenuItem } from '@core/component/Menu';
+import { ContextMenuContent, MenuItem } from '@core/component/ContextMenu';
 import { UserIcon } from '@core/component/UserIcon';
 import {
   DEV_MODE_ENV,
@@ -618,7 +618,7 @@ const SidebarSettingsWidget = (props: SidebarSettingsWidgetProps) => {
         </span>
         <CaretUpIcon class="size-3 text-ink-extra-muted shrink-0 group-data-[slim=true]/sidebar:hidden" />
       </Dropdown.Trigger>
-      <Dropdown.Content depth={3} class="min-w-56">
+      <Dropdown.Content>
         <Dropdown.Group>
           <For each={topItems()}>
             {(item) => (
