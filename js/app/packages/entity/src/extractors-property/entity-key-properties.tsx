@@ -56,6 +56,10 @@ interface EntityKeyPropertiesProps {
   entity: EntityWithProperties<EntityData>;
   /** Callback when properties are refreshed */
   onRefresh?: () => void;
+  /** Max visible user avatars in the assignees stack before collapsing to +N. */
+  maxUserStackUsers?: number;
+  /** Whether to show the edit affordance caret. */
+  showCaret?: boolean;
 }
 
 /**
@@ -106,6 +110,8 @@ export function EntityKeyProperties(props: EntityKeyPropertiesProps) {
         <KeyPropertiesRow
           properties={keyProperties}
           onRefresh={props.onRefresh}
+          maxUserStackUsers={props.maxUserStackUsers}
+          showCaret={props.showCaret}
         />
         <ScopedPortal scope="split">
           <Suspense>
@@ -120,6 +126,8 @@ export function EntityKeyProperties(props: EntityKeyPropertiesProps) {
 function KeyPropertiesRow(props: {
   properties: Accessor<PropertyT[]>;
   onRefresh?: () => void;
+  maxUserStackUsers?: number;
+  showCaret?: boolean;
 }) {
   const ctx = usePropertiesContext();
   const blockId = useMaybeBlockId();
@@ -166,19 +174,31 @@ function KeyPropertiesRow(props: {
                       }
                     >
                       <Match when={isMultiUserEntity()}>
-                        <Property.UserStack property={property} maxUsers={2} />
+                        <Property.UserStack
+                          property={property}
+                          maxUsers={props.maxUserStackUsers ?? 2}
+                        />
                       </Match>
                       <Match when={isUserEntity()}>
                         <Property.Icon property={property} />
                       </Match>
                     </Switch>
-                    <span class="@max-2xl/u-list:hidden">
-                      <Property.Text
-                        property={property}
-                        fallback={<Property.Empty label="None" />}
-                      />
-                    </span>
-                    <Property.Caret />
+                    <Property.Text
+                      property={property}
+                      class="@max-2xl/u-list:hidden"
+                      fallback={
+                        <>
+                          <Property.Empty
+                            label="None"
+                            class="@max-2xl/u-list:hidden"
+                          />
+                          <Property.Empty class="hidden @max-2xl/u-list:inline-flex" />
+                        </>
+                      }
+                    />
+                    <Show when={props.showCaret ?? true}>
+                      <Property.Caret />
+                    </Show>
                   </Property.EditTrigger>
                 </Layer>
               </Property.Tooltip>
