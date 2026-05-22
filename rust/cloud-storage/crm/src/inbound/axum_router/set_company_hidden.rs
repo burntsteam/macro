@@ -16,46 +16,47 @@ use crate::domain::{model::CrmError, service::CrmService};
 
 use super::CrmRouterState;
 
-/// Request body for `PUT /crm/companies/{company_id}/email-sync`.
+/// Request body for `PUT /companies/{company_id}/hidden`.
 #[derive(Debug, Deserialize, ToSchema)]
-pub struct SetEmailSyncRequest {
-    /// New value for `crm_companies.email_sync`. Setting to `false`
-    /// permanently deletes the company's CRM contacts and contact sources.
-    pub email_sync: bool,
+pub struct SetCompanyHiddenRequest {
+    /// New value for `crm_companies.hidden`. Setting to `true` hides
+    /// the company from CRM listings AND disables `email_sync` (which
+    /// permanently deletes the company's contacts and contact sources).
+    /// Setting to `false` un-hides the company; `email_sync` is left
+    /// untouched and the team must re-enable it explicitly.
+    pub hidden: bool,
 }
 
-/// Toggle `email_sync` on a CRM company. `false` disables CRM email
-/// sharing for the company and permanently removes its existing CRM
-/// contacts and contact sources.
+/// Toggle `hidden` on a CRM company. Hiding also disables `email_sync`
+/// and cascades to clearing the company's contacts and contact sources.
 #[utoipa::path(
     put,
-    path = "/crm/companies/{company_id}/email-sync",
-    operation_id = "set_email_sync",
+    path = "/crm/companies/{company_id}/hidden",
+    operation_id = "set_company_hidden",
     params(
         ("company_id" = Uuid, Path, description = "The CRM company to update"),
     ),
-    request_body = SetEmailSyncRequest,
+    request_body = SetCompanyHiddenRequest,
     responses(
         (status = 204),
         (status = 401, body = ErrorResponse),
         (status = 404, body = ErrorResponse),
-        (status = 409, body = ErrorResponse, description = "Company is hidden; un-hide before enabling email sync"),
         (status = 500, body = ErrorResponse),
     ),
 )]
-#[tracing::instrument(skip_all, err, fields(company_id = %company_id, email_sync = req.email_sync))]
+#[tracing::instrument(skip_all, err, fields(company_id = %company_id, hidden = req.hidden))]
 pub async fn handler<C: CrmService, Eas: EntityAccessService>(
     access: MacroUserTeamExtractor<AdminTeamRole, Eas>,
     State(state): State<CrmRouterState<C, Eas>>,
     Path(company_id): Path<Uuid>,
-    Json(req): Json<SetEmailSyncRequest>,
+    Json(req): Json<SetCompanyHiddenRequest>,
 ) -> Result<StatusCode, CrmError> {
     let team_id = macro_uuid::string_to_uuid(&access.entity_access_receipt.entity().entity_id)
         .map_err(|_| CrmError::InvalidTeamId)?;
 
     state
         .service
-        .set_email_sync(&team_id, &company_id, req.email_sync)
+        .set_company_hidden(&team_id, &company_id, req.hidden)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

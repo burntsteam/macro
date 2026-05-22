@@ -108,6 +108,31 @@ pub trait CrmService: Clone + Send + Sync + 'static {
         company_id: &uuid::Uuid,
         email_sync: bool,
     ) -> impl Future<Output = Result<(), CrmError>> + Send;
+
+    /// Toggle the `hidden` flag on a CRM company for `(company_id,
+    /// team_id)`. Hiding (`true`) also forces `email_sync = false` and
+    /// tears down contacts/sources atomically; see
+    /// [`crate::domain::companies_repo::CompaniesRepository::set_company_hidden`].
+    /// Un-hiding (`false`) leaves `email_sync` as-is — the team must
+    /// re-enable sync explicitly. Authorization is the caller's
+    /// responsibility.
+    fn set_company_hidden(
+        &self,
+        team_id: &uuid::Uuid,
+        company_id: &uuid::Uuid,
+        hidden: bool,
+    ) -> impl Future<Output = Result<(), CrmError>> + Send;
+
+    /// Toggle the `hidden` flag on a CRM contact, scoped to `team_id`
+    /// via the contact's company. Hiding is a display-only opt-out and
+    /// does not affect populate/depopulate. Authorization is the
+    /// caller's responsibility.
+    fn set_contact_hidden(
+        &self,
+        team_id: &uuid::Uuid,
+        contact_id: &uuid::Uuid,
+        hidden: bool,
+    ) -> impl Future<Output = Result<(), CrmError>> + Send;
 }
 
 /// Implementation of [`CrmService`] backed by a [`CompaniesRepository`]
@@ -282,6 +307,30 @@ where
     ) -> Result<(), CrmError> {
         self.companies_repository
             .set_email_sync(team_id, company_id, email_sync)
+            .await
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    async fn set_company_hidden(
+        &self,
+        team_id: &uuid::Uuid,
+        company_id: &uuid::Uuid,
+        hidden: bool,
+    ) -> Result<(), CrmError> {
+        self.companies_repository
+            .set_company_hidden(team_id, company_id, hidden)
+            .await
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    async fn set_contact_hidden(
+        &self,
+        team_id: &uuid::Uuid,
+        contact_id: &uuid::Uuid,
+        hidden: bool,
+    ) -> Result<(), CrmError> {
+        self.companies_repository
+            .set_contact_hidden(team_id, contact_id, hidden)
             .await
     }
 }
