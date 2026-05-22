@@ -1,7 +1,7 @@
 use model::authentication::login::request::{AppleLoginRequest, PasswordRequest};
 use teams::domain::model::{
-    PatchTeamRequest, PatchTeamUserRole, Team, TeamInviteDetails, TeamMember, TeamPlan, TeamRole,
-    TeamWithMembers,
+    PatchTeamCrmSettingsRequest, PatchTeamCrmSettingsResponse, PatchTeamRequest, PatchTeamUserRole,
+    Team, TeamInviteDetails, TeamMember, TeamPlan, TeamRole, TeamWithMembers,
 };
 use teams::inbound::axum_router::get_team_invites::TeamInvitesResponse as TeamTeamInvitesResponse;
 use teams::inbound::axum_router::get_user_invites::TeamInvitesResponse as UserTeamInvitesResponse;
@@ -124,6 +124,7 @@ use model::user::{
                 teams::inbound::axum_router::invite_to_team::handler::<crate::api::context::TeamsServiceType>,
                 teams::inbound::axum_router::get_team_invites::handler::<crate::api::context::TeamsServiceType>,
                 teams::inbound::axum_router::patch_team::handler::<crate::api::context::TeamsServiceType>,
+                teams::inbound::axum_router::patch_team_crm_settings::handler::<crate::api::context::TeamsServiceType>,
                 teams::inbound::axum_router::reject_invitation::handler::<crate::api::context::TeamsServiceType>,
                 teams::inbound::axum_router::get_user_invites::handler::<crate::api::context::TeamsServiceType>,
                 teams::inbound::axum_router::get_user_teams::handler::<crate::api::context::TeamsServiceType>,
@@ -196,6 +197,8 @@ use model::user::{
                         InviteToTeamRequest,
                         PatchTeamRequest,
                         PatchTeamUserRole,
+                        PatchTeamCrmSettingsRequest,
+                        PatchTeamCrmSettingsResponse,
                         TeamTeamInvitesResponse,
                         UserTeamInvitesResponse,
 
