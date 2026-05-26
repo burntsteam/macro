@@ -1,5 +1,8 @@
-import { usePropertyEntityDisplay } from '@core/component/Properties/hooks';
-import type { Property } from '@core/component/Properties/types';
+import { UserIcon } from '@core/component/UserIcon';
+import { useUnfurl } from '@core/signal/unfurl';
+import LinkIcon from '@phosphor/link.svg';
+import { usePropertyEntityDisplay } from '@property/hooks';
+import type { Property } from '@property/types';
 import {
   extractDomain,
   formatPropertyValue,
@@ -12,10 +15,7 @@ import {
   isStringProperty,
   PropertyDataTypeIcon,
   hasValue as propertyHasValue,
-} from '@core/component/Properties/utils';
-import { UserIcon } from '@core/component/UserIcon';
-import { useUnfurl } from '@core/signal/unfurl';
-import LinkIcon from '@phosphor/link.svg';
+} from '@property/utils';
 import type { EntityReference } from '@service-properties/generated/schemas/entityReference';
 import type { EntityType } from '@service-properties/generated/schemas/entityType';
 import { proxyResource } from '@service-unfurl/client';
