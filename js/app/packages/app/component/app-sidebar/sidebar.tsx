@@ -12,6 +12,11 @@ import { CommandState } from '@app/component/command';
 import { createMenuOpen, setCreateMenuOpen } from '@app/component/Launcher';
 import { requestSearchFocus } from '@app/component/next-soup/soup-view/search-controllers';
 import { useSplitLayout } from '@app/component/split-layout/layout';
+import type {
+  ReferredFrom,
+  SplitContent,
+  SplitHandle,
+} from '@app/component/split-layout/layoutManager';
 import { GO_TO_COMMAND_SCOPE, GO_TO_LEADER_KEY } from '@app/constants/hotkeys';
 import {
   LIST_VIEW_ID,
@@ -259,6 +264,45 @@ type SidebarHotkeyDeps = {
   openWithSplit: ReturnType<typeof useSplitLayout>['openWithSplit'];
 };
 
+type OpenWithSplitFn = ReturnType<typeof useSplitLayout>['openWithSplit'];
+
+const isComponentEntry =
+  (id: ListView) =>
+  (entry: SplitContent): boolean =>
+    entry.type === 'component' && entry.id === id;
+
+/**
+ * Navigate to a sidebar view, preserving prior state when possible.
+ *
+ * If the active split's history already contains an entry for this view, jump
+ * back to it so search text, filters, preview state, etc. are restored from
+ * that entry. Otherwise push a fresh entry. Holding shift bypasses the lookup
+ * and forces a new entry / new split.
+ */
+function navigateToSidebarView(args: {
+  viewId: ListView;
+  shiftKey: boolean;
+  activeSplit: SplitHandle | undefined;
+  openWithSplit: OpenWithSplitFn;
+  referredFrom?: ReferredFrom;
+}): SplitHandle | undefined {
+  const { viewId, shiftKey, activeSplit, openWithSplit, referredFrom } = args;
+
+  if (!shiftKey && activeSplit?.goToEntry(isComponentEntry(viewId))) {
+    return activeSplit;
+  }
+
+  return openWithSplit(
+    { type: 'component', id: viewId },
+    {
+      preferNewSplit: shiftKey,
+      mergeHistory: false,
+      allowDuplicate: true,
+      referredFrom,
+    }
+  );
+}
+
 const registerSidebarHotkeys = ({
   links,
   isSlim,
@@ -367,17 +411,12 @@ const registerSidebarHotkeys = ({
         }
       }
 
-      const handle = openWithSplit(
-        {
-          type: 'component',
-          id: link.id,
-        },
-        {
-          preferNewSplit: e?.shiftKey,
-          mergeHistory: false,
-          allowDuplicate: true,
-        }
-      );
+      const handle = navigateToSidebarView({
+        viewId: link.id,
+        shiftKey: !!e?.shiftKey,
+        activeSplit: globalSplitManager()?.activeSplit(),
+        openWithSplit,
+      });
       if (link.id === 'search' && handle) {
         requestSearchFocus(handle.id);
       }
@@ -1123,10 +1162,11 @@ const SidebarLink = (props: SidebarLinkProps) => {
               currentContent?.id === props.id;
 
             if (!isSameContent || e.shiftKey) {
-              currentContentHandle = layout.openWithSplit(content(), {
-                preferNewSplit: e.shiftKey,
-                mergeHistory: false,
-                allowDuplicate: true,
+              currentContentHandle = navigateToSidebarView({
+                viewId: props.id,
+                shiftKey: e.shiftKey,
+                activeSplit: currentContentHandle,
+                openWithSplit: layout.openWithSplit,
                 referredFrom: 'sidebar',
               });
             }
