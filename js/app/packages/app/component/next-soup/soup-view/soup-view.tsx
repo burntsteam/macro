@@ -23,6 +23,7 @@ import { useFilterRefinements } from '@app/component/next-soup/soup-view/filters
 import { MaybeSoupEntityActionDrawerManager } from '@app/component/next-soup/soup-view/SoupEntityActionDrawerManager';
 import type { SystemSortOption } from '@app/component/next-soup/soup-view/sort-options';
 import { SoupEntityContextMenu } from '@app/component/next-soup/soup-view/soup-entity-context-menu';
+import { persistSoupNavigationTouchHighlight } from '@app/component/next-soup/soup-view/soup-navigation-touch-highlight';
 import { activeSoupViewCounts } from '@app/component/next-soup/soup-view/soup-view-cache-key';
 import {
   SoupViewContextProvider,
@@ -762,6 +763,8 @@ export const SoupViewList = (props: SoupViewListProps) => {
       else soup.focus.set(entity.id);
       return;
     }
+
+    persistSoupNavigationTouchHighlight(event);
 
     await openEntityInSplitFromUnifiedList(entity, {
       openInNewSplit: event.shiftKey,
