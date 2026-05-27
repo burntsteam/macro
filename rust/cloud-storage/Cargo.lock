@@ -1957,18 +1957,28 @@ dependencies = [
  "async-trait",
  "axum",
  "chrono",
+ "connection_gateway_client",
+ "contacts",
  "entity_access",
+ "entity_access_db_utils",
  "http-body-util",
  "macro_db_migrator",
  "macro_user_id",
+ "macro_uuid",
  "mockall",
+ "model-entity",
  "model-error-response",
+ "model_notifications",
  "model_user",
  "models_pagination",
+ "models_permissions",
+ "notification",
  "schemars 1.2.1",
  "serde",
  "serde_json",
+ "share_permission_db_utils",
  "sqlx",
+ "sqs_client",
  "thiserror 2.0.18",
  "tokio",
  "tower 0.5.3",
@@ -6243,8 +6253,10 @@ dependencies = [
  "reqwest 0.13.3",
  "serde",
  "serde_json",
+ "sqlx",
  "tokio",
  "tokio-tungstenite 0.28.0",
+ "uuid",
 ]
 
 [[package]]
@@ -6574,6 +6586,7 @@ dependencies = [
  "doppleganger",
  "nom 8.0.0",
  "serde",
+ "sqlx",
  "thiserror 2.0.18",
  "tracing",
  "utoipa",
@@ -10620,6 +10633,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "share_permission_db_utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "entity_access_db_utils",
+ "macro_user_id",
+ "macro_uuid",
+ "models_permissions",
+ "sqlx",
 ]
 
 [[package]]
