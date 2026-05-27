@@ -77,6 +77,8 @@ export type FilterOption = {
 type FilterCategory = {
   id: string;
   label: string;
+  /** Plural form for multi-value chip display (e.g., 'Types', 'Statuses') */
+  labelPlural?: string;
   options: FilterOption[];
   multiple?: boolean;
 };
@@ -86,6 +88,7 @@ const INBOX_FILTER_CATEGORIES: FilterCategory[] = [
   {
     id: 'type',
     label: 'Type',
+    labelPlural: 'Types',
     options: [
       {
         id: 'document',
@@ -139,6 +142,7 @@ const MAIL_FILTER_CATEGORIES: FilterCategory[] = [
   {
     id: 'status',
     label: 'Status',
+    labelPlural: 'Statuses',
     options: [
       { id: 'unread', label: 'Unread' },
       { id: 'read', label: 'Read' },
@@ -150,6 +154,7 @@ const MAIL_FILTER_CATEGORIES: FilterCategory[] = [
   {
     id: 'attachment',
     label: 'Attachments',
+    labelPlural: 'Attachments',
     options: [
       {
         id: 'attachment-pdf',
@@ -172,6 +177,7 @@ const MAIL_FILTER_CATEGORIES: FilterCategory[] = [
   {
     id: 'calendar',
     label: 'Calendar',
+    labelPlural: 'Calendar',
     options: [{ id: 'has-calendar-invite', label: 'Has Calendar Invite' }],
     multiple: false,
   },
@@ -181,6 +187,7 @@ const TASKS_FILTER_CATEGORIES: FilterCategory[] = [
   {
     id: 'status',
     label: 'Status',
+    labelPlural: 'Statuses',
     options: [
       {
         id: 'task-not-started',
@@ -238,6 +245,7 @@ const TASKS_FILTER_CATEGORIES: FilterCategory[] = [
   {
     id: 'priority',
     label: 'Priority',
+    labelPlural: 'Priorities',
     options: [
       {
         id: 'task-urgent',
@@ -289,6 +297,7 @@ const DOCUMENTS_FILTER_CATEGORIES: FilterCategory[] = [
   {
     id: 'type',
     label: 'Type',
+    labelPlural: 'Types',
     options: [
       {
         id: 'doc-markdown',
@@ -657,8 +666,25 @@ const SearchIndexSubRow = (props: {
   </Dropdown.Sub>
 );
 
-export const UnifiedFilterDropdown = () => {
-  const [open, setOpen] = createSignal(false);
+interface UnifiedFilterDropdownProps {
+  /** Optional controlled open state */
+  open?: Accessor<boolean>;
+  onOpenChange?: (open: boolean) => void;
+  /** Optional custom trigger element. If not provided, uses default Filter button. */
+  customTrigger?: JSX.Element;
+  /** Hide the default trigger entirely (useful when controlling open state externally) */
+  hideTrigger?: boolean;
+}
+
+export const UnifiedFilterDropdown = (
+  props: UnifiedFilterDropdownProps = {}
+) => {
+  const [internalOpen, setInternalOpen] = createSignal(false);
+  const open = () => props.open?.() ?? internalOpen();
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    props.onOpenChange?.(v);
+  };
   const panel = useSplitPanelOrThrow();
   const { soup, queryFilters, assigneeFilter, setAssigneeFilter, activeTab } =
     useSoupView();
@@ -819,15 +845,51 @@ export const UnifiedFilterDropdown = () => {
     },
   });
 
+  // Capture anchor position when menu opens to prevent jumping when chips are added
+  const [anchorRect, setAnchorRect] = createSignal<DOMRect | null>(null);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      // Clear any stale anchor rect so it gets recaptured from trigger
+      setAnchorRect(null);
+    }
+    setOpen(isOpen);
+  };
+
+  const getAnchorRect = (anchor?: HTMLElement) => {
+    // If we have a captured rect, use it (prevents jumping)
+    const captured = anchorRect();
+    if (captured) return captured;
+
+    // Otherwise capture the current position
+    if (anchor) {
+      const rect = anchor.getBoundingClientRect();
+      setAnchorRect(rect);
+      return rect;
+    }
+    return undefined;
+  };
+
   return (
     <Show when={categories().length > 0 || isTasksView() || isSearchView()}>
-      <Dropdown open={open()} onOpenChange={setOpen}>
-        <Tooltip label="Filter" hotkey={TOKENS.soup.filter}>
-          <Dropdown.Trigger depth={2} class="bg-surface">
-            <SlidersHorizontalIcon />
-            <span>Filter</span>
-          </Dropdown.Trigger>
-        </Tooltip>
+      <Dropdown
+        open={open()}
+        onOpenChange={handleOpenChange}
+        getAnchorRect={getAnchorRect}
+      >
+        <Show when={!props.hideTrigger}>
+          <Switch>
+            <Match when={props.customTrigger}>{props.customTrigger}</Match>
+            <Match when={true}>
+              <Tooltip label="Filter" hotkey={TOKENS.soup.filter}>
+                <Dropdown.Trigger depth={2} class="bg-surface">
+                  <SlidersHorizontalIcon />
+                  <span>Filter</span>
+                </Dropdown.Trigger>
+              </Tooltip>
+            </Match>
+          </Switch>
+        </Show>
 
         <Dropdown.Content>
           <Dropdown.Group>
