@@ -2,11 +2,13 @@
 mod test;
 
 pub use crate::domain::models::{
-    AddParticipantsRequest, CreateChannelRequest, CreateChannelResponse,
-    CreateEntityMentionRequest, CreateEntityMentionResponse, DeleteEntityMentionResponse,
-    DeleteMessageQuery, GetOrCreateChannelResponse, GetOrCreateDmRequest,
+    AddParticipantsRequest, ChannelPreview, ChannelPreviewData, CreateChannelRequest,
+    CreateChannelResponse, CreateEntityMentionRequest, CreateEntityMentionResponse,
+    DeleteEntityMentionResponse, DeleteMessageQuery, GetBatchChannelPreviewRequest,
+    GetBatchChannelPreviewResponse, GetOrCreateChannelResponse, GetOrCreateDmRequest,
     GetOrCreatePrivateRequest, PatchChannelRequest, PatchMessageRequest, PostMessageRequest,
     PostMessageResponse, PostReactionRequest, PostTypingRequest, RemoveParticipantsRequest,
+    WithChannelId,
 };
 use crate::domain::models::{
     AttachmentChannelReference, AttachmentEntityReference, AttachmentGenericReference,
@@ -301,6 +303,10 @@ where
         .route(
             "/{channel_id}/participants",
             get(get_channel_participants_handler::<S, Svc>),
+        )
+        .route(
+            "/preview",
+            post(get_batch_channel_preview_handler::<S, Svc>),
         )
         .route(
             "/attachments/{entity_type}/{entity_id}/references",
@@ -1281,6 +1287,38 @@ pub async fn get_channel_participants_handler<S: ChannelService, Svc: EntityAcce
             .map(ApiChannelParticipant::from)
             .collect(),
     ))
+}
+
+/// Handler for `POST /channels/preview`.
+#[utoipa::path(
+    post,
+    tag = "channels",
+    operation_id = "get_batch_channel_preview",
+    path = "/channels/preview",
+    request_body = GetBatchChannelPreviewRequest,
+    responses(
+        (status = 200, body = GetBatchChannelPreviewResponse),
+        (status = 400, body = ErrorResponse),
+        (status = 401, body = ErrorResponse),
+        (status = 500, body = ErrorResponse),
+    )
+)]
+#[tracing::instrument(err, skip_all)]
+pub async fn get_batch_channel_preview_handler<S: ChannelService, Svc: EntityAccessService>(
+    State(state): State<ChannelsRouterState<S, Svc>>,
+    MacroUserExtractor {
+        macro_user_id,
+        user_context,
+        ..
+    }: MacroUserExtractor,
+    Json(req): Json<GetBatchChannelPreviewRequest>,
+) -> Result<Json<GetBatchChannelPreviewResponse>, ChannelsHandlerErr> {
+    let org_id = user_context.organization_id.map(i64::from);
+    let previews = state
+        .service
+        .batch_get_channel_previews(macro_user_id, org_id, req.channel_ids)
+        .await?;
+    Ok(Json(GetBatchChannelPreviewResponse { previews }))
 }
 
 /// Handler for `GET /channels/attachments/{entity_type}/{entity_id}/references`.

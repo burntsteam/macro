@@ -3,13 +3,13 @@ use crate::domain::{
     models::{
         AddParticipantsRequest, AttachmentEntityReference, ChannelAttachmentType,
         ChannelContextMessage, ChannelMessage, ChannelMessageFilters, ChannelParticipant,
-        ChannelType, CreateEntityMentionOptions, DeleteMessageQuery, EntityMention,
-        GetOrCreateAction, GetOrCreateChannelResponse, GetOrCreateDmRequest,
-        GetOrCreatePrivateRequest, MessagePageDirection, NewChannelAttachment, ParticipantRole,
-        PatchChannelRequest, PatchMessageRequest, PostMessageRequest, PostMessageResponse,
-        PostReactionRequest, PostTypingRequest, ReactionAction, ReferencedShareItem,
-        RemoveParticipantsRequest, ResolvedChannelMessage, SimpleMention, ThreadInfo, ThreadReply,
-        TopLevelMessageRow,
+        ChannelPreview, ChannelPreviewData, ChannelType, CreateEntityMentionOptions,
+        DeleteMessageQuery, EntityMention, GetOrCreateAction, GetOrCreateChannelResponse,
+        GetOrCreateDmRequest, GetOrCreatePrivateRequest, MessagePageDirection,
+        NewChannelAttachment, ParticipantRole, PatchChannelRequest, PatchMessageRequest,
+        PostMessageRequest, PostMessageResponse, PostReactionRequest, PostTypingRequest,
+        ReactionAction, ReferencedShareItem, RemoveParticipantsRequest, ResolvedChannelMessage,
+        SimpleMention, ThreadInfo, ThreadReply, TopLevelMessageRow, WithChannelId,
     },
     ports::{
         ChannelAttachmentsPage, ChannelEventDispatcher, ChannelMessagesErr,
@@ -1210,6 +1210,49 @@ where
             .map_err(anyhow::Error::from)?;
 
         Ok(participants)
+    }
+
+    #[tracing::instrument(err, skip(self, channel_ids))]
+    async fn batch_get_channel_previews(
+        &self,
+        viewer_user_id: MacroUserIdStr<'static>,
+        org_id: Option<i64>,
+        channel_ids: Vec<String>,
+    ) -> Result<Vec<ChannelPreview>, ChannelMessagesErr> {
+        let rows = self
+            .repo
+            .batch_get_channel_previews(&channel_ids, viewer_user_id.as_ref(), org_id)
+            .await
+            .map_err(anyhow::Error::from)?;
+
+        let mut previews: Vec<ChannelPreview> = Vec::with_capacity(channel_ids.len());
+        let mut found: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+        for row in rows {
+            let channel_id_str = row.info.id.to_string();
+            found.insert(channel_id_str.clone());
+            let channel_type = row.info.channel_type;
+            let channel_name = self
+                .repo
+                .resolve_channel_name(&row.info, viewer_user_id.clone())
+                .await
+                .map_err(anyhow::Error::from)?;
+            previews.push(ChannelPreview::Access(ChannelPreviewData {
+                channel_id: channel_id_str,
+                channel_name,
+                channel_type,
+            }));
+        }
+
+        for id in channel_ids {
+            if !found.contains(&id) {
+                previews.push(ChannelPreview::DoesNotExist(WithChannelId {
+                    channel_id: id,
+                }));
+            }
+        }
+
+        Ok(previews)
     }
 
     #[tracing::instrument(err, skip(self))]

@@ -1642,6 +1642,65 @@
         }
       }
     },
+    "/channels/preview": {
+      "post": {
+        "tags": ["channels"],
+        "summary": "Handler for `POST /channels/preview`.",
+        "operationId": "get_batch_channel_preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetBatchChannelPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetBatchChannelPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/channels/{channel_id}": {
       "delete": {
         "tags": ["channels"],
@@ -9105,6 +9164,87 @@
           }
         }
       },
+      "ChannelPreview": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ChannelPreviewData",
+                "description": "Viewer can access the channel."
+              },
+              {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["access"]
+                  }
+                }
+              }
+            ],
+            "description": "Viewer can access the channel."
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithChannelId",
+                "description": "Viewer cannot access the channel."
+              },
+              {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["no_access"]
+                  }
+                }
+              }
+            ],
+            "description": "Viewer cannot access the channel."
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WithChannelId",
+                "description": "Channel does not exist."
+              },
+              {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["does_not_exist"]
+                  }
+                }
+              }
+            ],
+            "description": "Channel does not exist."
+          }
+        ],
+        "description": "Preview entry for a single channel id."
+      },
+      "ChannelPreviewData": {
+        "type": "object",
+        "description": "Preview payload returned for accessible channels.",
+        "required": ["channel_id", "channel_name", "channel_type"],
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "description": "Channel id."
+          },
+          "channel_name": {
+            "type": "string",
+            "description": "Resolved channel display name."
+          },
+          "channel_type": {
+            "$ref": "#/components/schemas/ChannelType",
+            "description": "Channel type."
+          }
+        }
+      },
       "ChannelSharePermission": {
         "type": "object",
         "description": "The channel share permission",
@@ -11755,6 +11895,34 @@
               "$ref": "#/components/schemas/CallRecordPreview"
             },
             "description": "One entry per deduplicated input id."
+          }
+        }
+      },
+      "GetBatchChannelPreviewRequest": {
+        "type": "object",
+        "description": "Request for a batched channel preview lookup.",
+        "required": ["channel_ids"],
+        "properties": {
+          "channel_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Channel ids to look up."
+          }
+        }
+      },
+      "GetBatchChannelPreviewResponse": {
+        "type": "object",
+        "description": "Response for a batched channel preview lookup.",
+        "required": ["previews"],
+        "properties": {
+          "previews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChannelPreview"
+            },
+            "description": "Resolved channel previews, one per requested channel id."
           }
         }
       },
@@ -15365,6 +15533,17 @@
             "type": "string",
             "format": "uuid",
             "description": "The call identifier."
+          }
+        }
+      },
+      "WithChannelId": {
+        "type": "object",
+        "description": "Preview payload returned for channels with only id information.",
+        "required": ["channel_id"],
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "description": "Channel id."
           }
         }
       },
