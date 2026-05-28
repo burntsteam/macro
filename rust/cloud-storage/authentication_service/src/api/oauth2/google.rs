@@ -19,7 +19,9 @@ use crate::api::{
     },
 };
 use fusionauth::error::FusionAuthClientError;
-use fusionauth::identity_provider::{IdentityProviderLink, LinkUserRequest};
+use fusionauth::identity_provider::{
+    IdentityProviderLink, IdentityProviderLinkData, IdentityProviderLinkRole, LinkUserRequest,
+};
 
 async fn link_user(
     ctx: &ApiContext,
@@ -62,21 +64,15 @@ async fn link_user(
             )
         })?;
 
-    // Reject account-merge attempts: a different macro user already owns this email.
-    // Same-user re-linking (e.g. user adds their primary Gmail again) is allowed — init's
-    // idempotency check on email_links will short-circuit downstream.
-    if let Some(existing_macro_user_id) =
-        macro_db_client::user::get::get_macro_user_id_by_email(&ctx.db, &user_info_email)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        && existing_macro_user_id != macro_user_id
-    {
-        return Err((
-            StatusCode::NOT_IMPLEMENTED,
-            "user profile already exists".to_string(),
-        ));
-    }
-
+    // Attempt to create the FA IdP link for the calling user. Three terminal cases:
+    //   Ok                                  → fresh link created; data-source path downstream.
+    //   Err(alreadyLinked, owned by self)  → idempotent relink; data-source path no-ops downstream.
+    //   Err(alreadyLinked, owned by other) → cross-account add; init promotes to graph edge.
+    // The FA error doesn't distinguish self vs other in the typed variant, but it doesn't need
+    // to — init re-derives ownership via macrodb's User table to pick its dispatch path.
+    // Any link we create here is a secondary inbox-add (the primary FA link was already
+    // created at signup). Tag accordingly so login routing can reject sign-in attempts
+    // against this link — enforcement lands in a follow-up; this PR only writes the tag.
     match ctx
         .auth_client
         .link_user(LinkUserRequest {
@@ -86,13 +82,14 @@ async fn link_user(
                 identity_provider_user_id: Cow::Borrowed(&user_info.sub),
                 user_id: Cow::Borrowed(&macro_user_id.to_string()),
                 token: Cow::Borrowed(&token_response.refresh_token),
+                data: Some(IdentityProviderLinkData {
+                    role: Some(IdentityProviderLinkRole::Secondary),
+                }),
             },
         })
         .await
     {
         Ok(()) => {}
-        // Same Google identity already linked to this FA user → init's idempotency
-        // check on email_links will short-circuit downstream. No-op.
         Err(FusionAuthClientError::IdentityProviderLinkAlreadyExists) => {
             tracing::info!(
                 fusion_user_id = %macro_user_id,
