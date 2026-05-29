@@ -1841,6 +1841,14 @@ export const getChannelMessagesResponse = zod
                   .describe('A reaction with emoji and user list.')
               )
               .describe('Reactions on this message.'),
+            sender: zod
+              .object({
+                id: zod
+                  .string()
+                  .describe('Sender id without the storage namespace prefix.'),
+                type: zod.enum(['user', 'bot']).describe('Public sender type.'),
+              })
+              .describe('Public sender identity for channel messages.'),
             sender_id: zod.string().describe('Sender user id.'),
             thread: zod
               .object({
@@ -1901,6 +1909,20 @@ export const getChannelMessagesResponse = zod
                               .describe('A reaction with emoji and user list.')
                           )
                           .describe('Reactions on this reply.'),
+                        sender: zod
+                          .object({
+                            id: zod
+                              .string()
+                              .describe(
+                                'Sender id without the storage namespace prefix.'
+                              ),
+                            type: zod
+                              .enum(['user', 'bot'])
+                              .describe('Public sender type.'),
+                          })
+                          .describe(
+                            'Public sender identity for channel messages.'
+                          ),
                         sender_id: zod.string().describe('Sender user id.'),
                         updated_at: zod.iso
                           .datetime({})
@@ -2063,6 +2085,14 @@ export const postChannelMessagesResponse = zod
                   .describe('A reaction with emoji and user list.')
               )
               .describe('Reactions on this message.'),
+            sender: zod
+              .object({
+                id: zod
+                  .string()
+                  .describe('Sender id without the storage namespace prefix.'),
+                type: zod.enum(['user', 'bot']).describe('Public sender type.'),
+              })
+              .describe('Public sender identity for channel messages.'),
             sender_id: zod.string().describe('Sender user id.'),
             thread: zod
               .object({
@@ -2123,6 +2153,20 @@ export const postChannelMessagesResponse = zod
                               .describe('A reaction with emoji and user list.')
                           )
                           .describe('Reactions on this reply.'),
+                        sender: zod
+                          .object({
+                            id: zod
+                              .string()
+                              .describe(
+                                'Sender id without the storage namespace prefix.'
+                              ),
+                            type: zod
+                              .enum(['user', 'bot'])
+                              .describe('Public sender type.'),
+                          })
+                          .describe(
+                            'Public sender identity for channel messages.'
+                          ),
                         sender_id: zod.string().describe('Sender user id.'),
                         updated_at: zod.iso
                           .datetime({})
@@ -2191,6 +2235,14 @@ export const getMessageWithContextResponse = zod
               .nullish()
               .describe('When the message was edited.'),
             id: zod.uuid().describe('Message id.'),
+            sender: zod
+              .object({
+                id: zod
+                  .string()
+                  .describe('Sender id without the storage namespace prefix.'),
+                type: zod.enum(['user', 'bot']).describe('Public sender type.'),
+              })
+              .describe('Public sender identity for channel messages.'),
             sender_id: zod.string().describe('Sender user id.'),
             thread_id: zod
               .uuid()
@@ -2255,6 +2307,14 @@ export const getThreadRepliesResponseItem = zod
           .describe('A reaction with emoji and user list.')
       )
       .describe('Reactions on this reply.'),
+    sender: zod
+      .object({
+        id: zod
+          .string()
+          .describe('Sender id without the storage namespace prefix.'),
+        type: zod.enum(['user', 'bot']).describe('Public sender type.'),
+      })
+      .describe('Public sender identity for channel messages.'),
     sender_id: zod.string().describe('Sender user id.'),
     updated_at: zod.iso
       .datetime({})

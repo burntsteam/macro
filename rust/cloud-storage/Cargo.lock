@@ -1704,6 +1704,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "bot_id"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "sqlx",
+ "thiserror 2.0.18",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "bots"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "bot_id",
+ "chrono",
+ "entity_access",
+ "hex",
+ "macro_db_migrator",
+ "macro_user_id",
+ "macro_uuid",
+ "model-error-response",
+ "model_user",
+ "rand 0.9.4",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "thiserror 2.0.18",
+ "tokio",
+ "tower 0.5.3",
+ "tracing",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
 name = "bs58"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1959,6 +1998,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
+ "bot_id",
  "chrono",
  "connection_gateway_client",
  "contacts",
@@ -3414,6 +3454,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "base64 0.22.1",
+ "bots",
  "bytes",
  "bzip2",
  "cal",
