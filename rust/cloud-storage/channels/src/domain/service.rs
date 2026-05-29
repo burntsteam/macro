@@ -1252,6 +1252,21 @@ where
         Ok(participants)
     }
 
+    #[tracing::instrument(err, skip(self))]
+    async fn get_channel_metadata(
+        &self,
+        channel_id: Uuid,
+        viewer_user_id: MacroUserIdStr<'static>,
+    ) -> Result<ChannelMetadata, ChannelMessagesErr> {
+        let metadata = self
+            .repo
+            .get_channel_metadata(channel_id, viewer_user_id)
+            .await
+            .map_err(anyhow::Error::from)?;
+
+        Ok(metadata)
+    }
+
     #[tracing::instrument(err, skip(self, channel_ids))]
     async fn batch_get_channel_previews(
         &self,
