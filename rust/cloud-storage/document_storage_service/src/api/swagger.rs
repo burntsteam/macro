@@ -117,6 +117,7 @@ use models_soup::email_thread::{
     SoupAttachment, SoupContact, SoupEmailThreadPreview, SoupEnrichedEmailThreadPreview, SoupLabel,
     SoupLabelListVisibility, SoupLabelType, SoupMessageListVisibility,
 };
+use models_soup::foreign_entity::SoupForeignEntity;
 use models_soup::item::SoupItem;
 use models_soup::project::SoupProject;
 use soup::inbound::axum_router::{PostSoupRequest, SoupApiItem, SoupApiSort, SoupPage};
@@ -360,6 +361,7 @@ use utoipa::OpenApi;
             SoupDocument,
             SoupChat,
             SoupProject,
+            SoupForeignEntity,
             SoupApiSort,
             SoupPage,
             SoupEnrichedEmailThreadPreview,
