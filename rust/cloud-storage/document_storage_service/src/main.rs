@@ -409,6 +409,7 @@ async fn main() -> anyhow::Result<()> {
         },
         document_service.clone(),
         foreign_entity_service.clone(),
+        (*notification_ingress_service).clone(),
         PgGithubSyncRepo::new(db.clone()),
         GithubSyncClientImpl::default(),
     );
