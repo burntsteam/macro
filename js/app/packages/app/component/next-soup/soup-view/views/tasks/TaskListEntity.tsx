@@ -111,6 +111,7 @@ export function TaskListEntity(props: TaskListEntityProps) {
   const layoutProps = (): LayoutProps => ({
     entity: props.entity,
     checked: props.checked,
+    hideCheckbox: props.hideCheckbox,
     onChecked: props.onChecked,
     unread: unread(),
     isShared: isShared(),
