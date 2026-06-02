@@ -1,6 +1,7 @@
 use crate::domain::models::{Link, UserProvider};
 use macro_user_id::user_id::MacroUserIdStr;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use super::db_types::{DbLink, DbUserProvider};
 
@@ -60,6 +61,61 @@ pub(super) async fn link_by_fusionauth_email_provider(
         fusionauth_user_id,
         email_address,
         provider as _
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    db_link
+        .map(|v| v.try_into_model())
+        .transpose()
+        .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+}
+
+#[tracing::instrument(err, skip(pool))]
+pub(super) async fn links_by_fusionauth_user_id(
+    pool: &PgPool,
+    fusionauth_user_id: &str,
+) -> Result<Vec<Link>, sqlx::Error> {
+    let db_links: Vec<DbLink> = sqlx::query_as!(
+        DbLink,
+        r#"
+        SELECT id, macro_id, fusionauth_user_id, email_address, provider as "provider: _",
+               is_sync_active, created_at, updated_at
+        FROM email_links
+        WHERE fusionauth_user_id = $1
+        ORDER BY created_at DESC
+        "#,
+        fusionauth_user_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    db_links
+        .into_iter()
+        .map(|v| {
+            v.try_into_model()
+                .map_err(|e| sqlx::Error::Decode(Box::new(e)))
+        })
+        .collect()
+}
+
+#[tracing::instrument(err, skip(pool))]
+pub(super) async fn owned_link_for_thread(
+    pool: &PgPool,
+    thread_id: Uuid,
+    fusionauth_user_id: &str,
+) -> Result<Option<Link>, sqlx::Error> {
+    let db_link: Option<DbLink> = sqlx::query_as!(
+        DbLink,
+        r#"
+        SELECT l.id, l.macro_id, l.fusionauth_user_id, l.email_address, l.provider as "provider: _",
+               l.is_sync_active, l.created_at, l.updated_at
+        FROM email_threads t
+        JOIN email_links l ON l.id = t.link_id
+        WHERE t.id = $1 AND l.fusionauth_user_id = $2
+        "#,
+        thread_id,
+        fusionauth_user_id
     )
     .fetch_optional(pool)
     .await?;
