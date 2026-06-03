@@ -206,7 +206,7 @@ function RecipientDropRow(props: {
 
   return (
     <div
-      class={cn('flex flex-row items-center', props.class)}
+      class={cn('flex flex-row items-start min-w-0', props.class)}
       classList={{ 'bg-accent/10': isDragOver() }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -1385,7 +1385,7 @@ export function BaseInput(props: {
       solid
     >
       {/* Top Bar */}
-      <div class="relative flex items-start gap-2 px-3 pt-1.5 pb-0.5">
+      <div class="relative flex items-start gap-2 px-3 pt-1.5 pb-0.5 min-w-0">
         <Dropdown>
           <Dropdown.Trigger>
             <Switch>
@@ -1439,28 +1439,37 @@ export function BaseInput(props: {
               class="flex flex-1 items-center gap-1.5 min-w-0 mt-1 text-sm text-ink-muted"
               onClick={() => setShowExpandedRecipients(true)}
             >
-              <TruncatedRecipientList
-                toRecipients={form().recipients().to}
-                ccRecipients={form().recipients().cc}
-                bccRecipients={form().recipients().bcc}
-                onClick={() => setShowExpandedRecipients(true)}
-              />
-              <Show when={(emailLinksQuery.data?.links.length ?? 0) > 1}>
-                <span class="shrink-0 text-ink-extra-muted">·</span>
-                <span class="shrink-0 truncate">from {activeInboxEmail()}</span>
+              <Show
+                when={!isMobile()}
+                fallback={
+                  <PencilSimple class="size-4 shrink-0 text-ink-muted ml-auto" />
+                }
+              >
+                <TruncatedRecipientList
+                  toRecipients={form().recipients().to}
+                  ccRecipients={form().recipients().cc}
+                  bccRecipients={form().recipients().bcc}
+                  onClick={() => setShowExpandedRecipients(true)}
+                />
+                <Show when={(emailLinksQuery.data?.links.length ?? 0) > 1}>
+                  <span class="shrink-0 text-ink-extra-muted">·</span>
+                  <span class="min-w-0 shrink-[2] truncate">
+                    from {activeInboxEmail()}
+                  </span>
+                </Show>
+                <PencilSimple class="size-3.5 shrink-0 text-ink-extra-muted" />
               </Show>
-              <PencilSimple class="size-3.5 shrink-0 text-ink-extra-muted" />
             </div>
           }
         >
           <div
             ref={setExpandedRecipientsRef}
-            class="w-full text-sm text-ink-muted"
+            class="flex-1 min-w-0 text-sm text-ink-muted"
           >
             {/* Expanded FROM */}
-            <div class="flex flex-row items-center py-0.5">
-              <div class="min-w-8">from</div>
-              <div class="pl-4 min-w-0 flex-1">
+            <div class="flex flex-row items-center py-0.5 min-w-0">
+              <div class="w-10 shrink-0">from</div>
+              <div class="pl-2 min-w-0 flex-1">
                 <FromInboxSelector
                   links={emailLinksQuery.data?.links ?? []}
                   activeLinkId={activeLinkId()}
@@ -1476,8 +1485,9 @@ export function BaseInput(props: {
               dragState={recipientDragState}
               onDrop={handleRecipientDrop}
             >
-              <div class="min-w-8">to</div>
+              <div class="w-10 shrink-0 pt-2">to</div>
               <RecipientSelector<EmailRecipient['kind']>
+                class="min-w-0"
                 inputRef={setToRef}
                 options={ctx.recipientOptions}
                 selfEmail={activeInboxEmail()}
@@ -1501,8 +1511,9 @@ export function BaseInput(props: {
                 dragState={recipientDragState}
                 onDrop={handleRecipientDrop}
               >
-                <div class="min-w-8">cc</div>
+                <div class="w-10 shrink-0 pt-2">cc</div>
                 <RecipientSelector<EmailRecipient['kind']>
+                  class="min-w-0"
                   inputRef={setCcRef}
                   options={ctx.recipientOptions}
                   selfEmail={activeInboxEmail()}
@@ -1527,8 +1538,9 @@ export function BaseInput(props: {
                 dragState={recipientDragState}
                 onDrop={handleRecipientDrop}
               >
-                <div class="min-w-8">bcc</div>
+                <div class="w-10 shrink-0 pt-2">bcc</div>
                 <RecipientSelector<EmailRecipient['kind']>
+                  class="min-w-0"
                   inputRef={setBccRef}
                   options={ctx.recipientOptions}
                   selfEmail={activeInboxEmail()}
