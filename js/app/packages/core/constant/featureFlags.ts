@@ -384,5 +384,7 @@ export const ENABLE_CREATE_PROPERTY = resolveFeatureFlag(
   false
 );
 
+export const ENABLE_HOME_OVERRIDE = DEV_MODE_ENV ? true : undefined;
+
 export const ENABLE_NEW_PRICING_OVERRIDE =
   resolveFeatureFlag('ENABLE_NEW_PRICING', DEV_MODE_ENV) || undefined;
