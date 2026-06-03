@@ -5,7 +5,7 @@ use crate::domain::{
     companies_repo::{CompaniesRepository, CrmCompanyListSort, CrmCompanySoupCursor},
     company_metadata_resolver::CompanyMetadataResolver,
     generic_email_domains::is_generic_email_domain,
-    model::{CrmCompany, CrmCompanyForSoup, CrmContact, CrmError, CrmScopePrecheck},
+    model::{CrmCompanyForSoup, CrmCompanyWithContacts, CrmContact, CrmError, CrmScopePrecheck},
 };
 use chrono::{DateTime, Utc};
 use serde_json::Value;
@@ -13,15 +13,6 @@ use serde_json::Value;
 /// The CrmService exposes operations over CRM records (companies, their
 /// domains and contacts).
 pub trait CrmService: Clone + Send + Sync + 'static {
-    /// Fetches the company for the given team that has `domain` registered
-    /// against it, hydrated with all of the company's domains. Returns
-    /// `Ok(None)` when no company in the team has that domain.
-    fn get_company_by_domain(
-        &self,
-        team_id: &uuid::Uuid,
-        domain: &str,
-    ) -> impl Future<Output = Result<Option<CrmCompany>, CrmError>> + Send;
-
     /// Idempotently records that `email` was seen from the mailbox
     /// identified by `link_id`, for the team `team_id`. Upserts
     /// `crm_companies` (+ `crm_domains`), `crm_contacts`, and
@@ -183,11 +174,15 @@ pub trait CrmService: Clone + Send + Sync + 'static {
         addresses: &[String],
     ) -> impl Future<Output = Result<CrmScopePrecheck, CrmError>> + Send;
 
-    /// List the team's CRM companies for the soup feed. See
+    /// List the team's CRM companies for the soup feed. `user_id` is
+    /// required by the `Viewed*` sort variants (per-user
+    /// `UserHistory` join); see
     /// [`CompaniesRepository::list_companies_for_soup`].
+    #[allow(clippy::too_many_arguments)]
     fn list_companies_for_soup(
         &self,
         team_id: &uuid::Uuid,
+        user_id: &str,
         company_ids: &[uuid::Uuid],
         hidden: Option<bool>,
         sort: CrmCompanyListSort,
@@ -219,6 +214,19 @@ pub trait CrmService: Clone + Send + Sync + 'static {
         contact_id: &uuid::Uuid,
         include_hidden: bool,
     ) -> impl Future<Output = Result<Option<CrmContact>, CrmError>> + Send;
+
+    /// Fetch a single CRM company by id, scoped to `team_id`, hydrated
+    /// with all domains, the primary domain's directory metadata, and
+    /// the company's full contact list. `include_hidden = false` hides
+    /// companies whose `hidden` flag is set and filters hidden contacts;
+    /// `true` (admin/owner) reveals every owned company and contact.
+    /// See [`CompaniesRepository::get_company_for_team`].
+    fn get_company_for_team(
+        &self,
+        team_id: &uuid::Uuid,
+        company_id: &uuid::Uuid,
+        include_hidden: bool,
+    ) -> impl Future<Output = Result<Option<CrmCompanyWithContacts>, CrmError>> + Send;
 
     /// Create a comment on a CRM company or contact, optionally as a reply
     /// to an existing thread. See
@@ -332,17 +340,6 @@ where
     CR: CompaniesRepository,
     R: CompanyMetadataResolver,
 {
-    #[tracing::instrument(skip(self), err)]
-    async fn get_company_by_domain(
-        &self,
-        team_id: &uuid::Uuid,
-        domain: &str,
-    ) -> Result<Option<CrmCompany>, CrmError> {
-        self.companies_repository
-            .get_company_by_domain(team_id, domain)
-            .await
-    }
-
     #[tracing::instrument(skip(self), err)]
     #[allow(clippy::too_many_arguments)]
     async fn populate_contact(
@@ -530,9 +527,11 @@ where
     }
 
     #[tracing::instrument(skip(self), err)]
+    #[allow(clippy::too_many_arguments)]
     async fn list_companies_for_soup(
         &self,
         team_id: &uuid::Uuid,
+        user_id: &str,
         company_ids: &[uuid::Uuid],
         hidden: Option<bool>,
         sort: CrmCompanyListSort,
@@ -540,7 +539,7 @@ where
         limit: i64,
     ) -> Result<Vec<CrmCompanyForSoup>, CrmError> {
         self.companies_repository
-            .list_companies_for_soup(team_id, company_ids, hidden, sort, cursor, limit)
+            .list_companies_for_soup(team_id, user_id, company_ids, hidden, sort, cursor, limit)
             .await
     }
 
@@ -565,6 +564,18 @@ where
     ) -> Result<Option<CrmContact>, CrmError> {
         self.companies_repository
             .get_contact_for_team(team_id, contact_id, include_hidden)
+            .await
+    }
+
+    #[tracing::instrument(skip(self), err)]
+    async fn get_company_for_team(
+        &self,
+        team_id: &uuid::Uuid,
+        company_id: &uuid::Uuid,
+        include_hidden: bool,
+    ) -> Result<Option<CrmCompanyWithContacts>, CrmError> {
+        self.companies_repository
+            .get_company_for_team(team_id, company_id, include_hidden)
             .await
     }
 
@@ -654,14 +665,6 @@ where
 pub struct NoOpCrmService;
 
 impl CrmService for NoOpCrmService {
-    async fn get_company_by_domain(
-        &self,
-        _team_id: &uuid::Uuid,
-        _domain: &str,
-    ) -> Result<Option<CrmCompany>, CrmError> {
-        unimplemented!("NoOpCrmService.get_company_by_domain")
-    }
-
     async fn populate_contact(
         &self,
         _team_id: &uuid::Uuid,
@@ -733,9 +736,11 @@ impl CrmService for NoOpCrmService {
         unimplemented!("NoOpCrmService.crm_scope_precheck")
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn list_companies_for_soup(
         &self,
         _team_id: &uuid::Uuid,
+        _user_id: &str,
         _company_ids: &[uuid::Uuid],
         _hidden: Option<bool>,
         _sort: CrmCompanyListSort,
@@ -760,6 +765,15 @@ impl CrmService for NoOpCrmService {
         _contact_id: &uuid::Uuid,
         _include_hidden: bool,
     ) -> Result<Option<CrmContact>, CrmError> {
+        Ok(None)
+    }
+
+    async fn get_company_for_team(
+        &self,
+        _team_id: &uuid::Uuid,
+        _company_id: &uuid::Uuid,
+        _include_hidden: bool,
+    ) -> Result<Option<CrmCompanyWithContacts>, CrmError> {
         Ok(None)
     }
 
