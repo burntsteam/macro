@@ -809,6 +809,15 @@ export function BaseInput(props: {
     if (draftSaveTimer) window.clearTimeout(draftSaveTimer);
   });
 
+  // Persist the draft immediately when the user switches the sending inbox, even
+  // without a text edit, so it moves to the new inbox and the choice survives a
+  // refresh. Driven by the explicit switch (below) rather than inbox reactivity.
+  const persistDraftOnSenderSwitch = (linkId: string) => {
+    form().setSelectedFromLink(linkId);
+    if (draftSaveTimer) window.clearTimeout(draftSaveTimer);
+    void executeSaveDraft();
+  };
+
   // After a send, the bottom input stays mounted and its replyingTo flips to
   // the just-sent message once the thread refetches. Cancel the inhibited
   // post-send save and re-enable saves so a fresh edit under the new form
@@ -1455,7 +1464,7 @@ export function BaseInput(props: {
                 <FromInboxSelector
                   links={emailLinksQuery.data?.links ?? []}
                   activeLinkId={activeLinkId()}
-                  onSelect={(id) => form().setSelectedFromLink(id)}
+                  onSelect={persistDraftOnSenderSwitch}
                 />
               </div>
             </div>
