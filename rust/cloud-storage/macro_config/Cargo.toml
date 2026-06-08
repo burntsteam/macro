@@ -1,15 +1,16 @@
 [package]
 edition = "2024"
-name = "remote_env_var"
+name = "macro_config"
 publish = false
 version = "0.1.0"
 
 [dependencies]
-macro_env = { path = "../macro_env" }
+macro_config_derive = { path = "../macro_config_derive" }
 serde = { workspace = true }
-thiserror = { workspace = true }
+serde_json = { workspace = true }
 tracing = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 macro_env_var = { path = "../macro_env_var" }
-serde_json = { workspace = true }
+remote_env_var = { path = "../remote_env_var" }
