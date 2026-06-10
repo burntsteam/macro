@@ -1202,6 +1202,12 @@ export const storageServiceClient = {
     ).map((result) => result.data);
   },
 
+  async fetchCachedSnapshot(
+    documentId: string
+  ): Promise<Result<Uint8Array, ResultError<FetchWithTokenErrorCode>[]>> {
+    return dssFetch<Uint8Array>(`/documents/${documentId}/cached_snapshot_url`);
+  },
+
   async getDocumentShortId({
     documentId,
   }: {

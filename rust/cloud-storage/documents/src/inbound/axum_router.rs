@@ -25,10 +25,12 @@ pub mod create_task;
 pub mod delete_document;
 pub mod edit_document;
 pub mod get_branch_name;
+pub mod get_cached_snapshot_url;
 pub mod get_document;
 pub mod get_github_pull_requests;
 pub mod get_location;
 pub mod get_short_id;
+pub mod put_snapshot;
 pub mod task_duplicates;
 pub mod team_share;
 
@@ -59,10 +61,12 @@ use self::{
     delete_document::delete_document_handler,
     edit_document::edit_document_handler,
     get_branch_name::get_branch_name_handler,
+    get_cached_snapshot_url::get_cached_snapshot_url_handler,
     get_document::get_document_handler,
     get_github_pull_requests::get_github_pull_requests_handler,
     get_location::get_location_v3_handler,
     get_short_id::get_short_id_handler,
+    put_snapshot::put_snapshot_handler,
     task_duplicates::{
         delete_this_duplicate_task_handler, dismiss_task_duplicates_handler,
         get_task_duplicates_handler, task_similarity_search_handler,
@@ -196,6 +200,14 @@ where
         .route(
             "/{document_id}/duplicates/{match_id}/delete_this",
             axum::routing::post(delete_this_duplicate_task_handler::<T, Svc>),
+        )
+        .route(
+            "/{document_id}/cached_snapshot_url",
+            axum::routing::get(get_cached_snapshot_url_handler::<T, Svc>),
+        )
+        .route(
+            "/{document_id}/snapshot",
+            axum::routing::put(put_snapshot_handler::<T, Svc>),
         )
         .route(
             "/{document_id}/team_share",
