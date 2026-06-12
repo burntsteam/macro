@@ -203,10 +203,9 @@ function BlockMarkdownContent({ optimisticSnapshot }: BlockMarkdownProps) {
                     <TopBar name={displayName} />
                   </Show>
                 </Suspense>
-                {/* off until - https://linear.app/macro-eng/issue/M-5203/markdown-unloads-completely-after-find */}
                 <Suspense>
-                  <Show when={!isInstructionsMd() && false}>
-                    <div class="absolute right-4 bottom-[-12] translate-y-full z-action-menu flex justify-end">
+                  <Show when={!isInstructionsMd()}>
+                    <div class="absolute right-4 top-1.5 z-action-menu flex justify-end">
                       <FindAndReplace />
                     </div>
                   </Show>
