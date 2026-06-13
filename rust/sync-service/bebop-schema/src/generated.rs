@@ -3,11 +3,11 @@
 //
 //
 //   bebopc version:
-//       3.2.1
+//       3.1.3
 //
 //
 //   bebopc source:
-//       https://github.com/6over3/bebop
+//       https://github.com/betwixt-labs/bebop
 //
 //
 // Changes to this file may cause incorrect behavior and will be lost if
@@ -16,9 +16,9 @@
 
 #![allow(warnings)]
 
-use bebop::FixedSized as _;
-use core::convert::TryInto as _;
-use std::io::Write as _;
+use ::std::io::Write as _;
+use ::core::convert::TryInto as _;
+use ::bebop::FixedSized as _;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum FromPeer<'raw> {
@@ -27,7 +27,8 @@ pub enum FromPeer<'raw> {
 
     /// Discriminator 1
     PeerUpdate {
-        update: ::bebop::SliceWrapper<'raw, u8>,
+        updates: ::std::vec::Vec<::bebop::SliceWrapper<'raw, u8>>,
+        id: &'raw str,
     },
 
     /// Discriminator 2
@@ -37,34 +38,60 @@ pub enum FromPeer<'raw> {
 
     /// Discriminator 3
     PeerRequestSince {
-        frontiers: ::bebop::SliceWrapper<'raw, u8>,
+        vv: ::bebop::SliceWrapper<'raw, u8>,
     },
 
     /// Discriminator 4
-    PeerRequestSnapshot {},
+    PeerRequestSnapshot {
+    },
 
     /// Discriminator 5
-    PeerRegisterId { peerid: u64 },
+    PeerRegisterId {
+        peerid: u64,
+    },
 }
 
 impl<'raw> ::bebop::SubRecord<'raw> for FromPeer<'raw> {
     const MIN_SERIALIZED_SIZE: usize = ::bebop::LEN_SIZE + 1;
 
     fn serialized_size(&self) -> usize {
-        ::bebop::LEN_SIZE
-            + 1
-            + match self {
-                FromPeer::Unknown => 0,
-                Self::PeerUpdate { update: _update } => _update.serialized_size(),
-                Self::PeerAwareness {
-                    awareness: _awareness,
-                } => _awareness.serialized_size(),
-                Self::PeerRequestSince {
-                    frontiers: _frontiers,
-                } => _frontiers.serialized_size(),
-                Self::PeerRequestSnapshot {} => 0,
-                Self::PeerRegisterId { peerid: _peerid } => _peerid.serialized_size(),
+        ::bebop::LEN_SIZE + 1 +
+        match self {
+            FromPeer::Unknown => {
+                0
             }
+            Self::PeerUpdate {
+                updates: ref _updates,
+                id: ref _id,
+            }
+            => {
+                _updates.serialized_size() +
+                _id.serialized_size()
+            }
+            Self::PeerAwareness {
+                awareness: ref _awareness,
+            }
+            => {
+                _awareness.serialized_size()
+            }
+            Self::PeerRequestSince {
+                vv: ref _vv,
+            }
+            => {
+                _vv.serialized_size()
+            }
+            Self::PeerRequestSnapshot {
+            }
+            => {
+                0
+            }
+            Self::PeerRegisterId {
+                peerid: ref _peerid,
+            }
+            => {
+                _peerid.serialized_size()
+            }
+        }
     }
 
     ::bebop::define_serialize_chained!(Self => |zelf, dest| {
@@ -75,25 +102,27 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromPeer<'raw> {
                 return Err(::bebop::SerializeError::CannotSerializeUnknownUnion);
             }
             Self::PeerUpdate {
-                update:_update,
+                updates: ref _updates,
+                id: ref _id,
             }
             => {
                 1u8._serialize_chained(dest)?;
-                _update._serialize_chained(dest)?;
+                _updates._serialize_chained(dest)?;
+                _id._serialize_chained(dest)?;
             }
             Self::PeerAwareness {
-                awareness:_awareness,
+                awareness: ref _awareness,
             }
             => {
                 2u8._serialize_chained(dest)?;
                 _awareness._serialize_chained(dest)?;
             }
             Self::PeerRequestSince {
-                frontiers:_frontiers,
+                vv: ref _vv,
             }
             => {
                 3u8._serialize_chained(dest)?;
-                _frontiers._serialize_chained(dest)?;
+                _vv._serialize_chained(dest)?;
             }
             Self::PeerRequestSnapshot {
             }
@@ -101,7 +130,7 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromPeer<'raw> {
                 4u8._serialize_chained(dest)?;
             }
             Self::PeerRegisterId {
-                peerid:_peerid,
+                peerid: ref _peerid,
             }
             => {
                 5u8._serialize_chained(dest)?;
@@ -118,27 +147,40 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromPeer<'raw> {
             1 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
+                let (read, v1) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
+                i += read;
 
-                FromPeer::PeerUpdate { update: v0 }
+                FromPeer::PeerUpdate {
+                    updates: v0,
+                    id: v1,
+                }
             }
             2 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
 
-                FromPeer::PeerAwareness { awareness: v0 }
+                FromPeer::PeerAwareness {
+                    awareness: v0,
+                }
             }
             3 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
 
-                FromPeer::PeerRequestSince { frontiers: v0 }
+                FromPeer::PeerRequestSince {
+                    vv: v0,
+                }
             }
-            4 => FromPeer::PeerRequestSnapshot {},
+            4 => {
+                FromPeer::PeerRequestSnapshot {}
+            }
             5 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
 
-                FromPeer::PeerRegisterId { peerid: v0 }
+                FromPeer::PeerRegisterId {
+                    peerid: v0,
+                }
             }
             _ => {
                 i = len;
@@ -148,10 +190,12 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromPeer<'raw> {
         if !cfg!(feature = "unchecked") && i != len {
             debug_assert!(i > len);
             Err(::bebop::DeserializeError::CorruptFrame)
-        } else {
+        }
+        else {
             Ok((i, de))
         }
     }
+
 }
 
 impl<'raw> ::bebop::Record<'raw> for FromPeer<'raw> {}
@@ -184,13 +228,13 @@ pub enum FromRemote<'raw> {
 
     /// Discriminator 5
     RemoteUpdateAck {
-        update: ::bebop::SliceWrapper<'raw, u8>,
+        id: &'raw str,
     },
 
     /// Discriminator 6
     RemoteUpdateSince {
         update: ::bebop::SliceWrapper<'raw, u8>,
-        frontiers: ::bebop::SliceWrapper<'raw, u8>,
+        vv: ::bebop::SliceWrapper<'raw, u8>,
     },
 }
 
@@ -198,27 +242,52 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromRemote<'raw> {
     const MIN_SERIALIZED_SIZE: usize = ::bebop::LEN_SIZE + 1;
 
     fn serialized_size(&self) -> usize {
-        ::bebop::LEN_SIZE
-            + 1
-            + match self {
-                FromRemote::Unknown => 0,
-                Self::RemoteInitialSync {
-                    snapshot: _snapshot,
-                    awareness: _awareness,
-                } => _snapshot.serialized_size() + _awareness.serialized_size(),
-                Self::RemoteUpdate { update: _update } => _update.serialized_size(),
-                Self::RemoteAwareness {
-                    awareness: _awareness,
-                } => _awareness.serialized_size(),
-                Self::RemoteSnapshot {
-                    snapshot: _snapshot,
-                } => _snapshot.serialized_size(),
-                Self::RemoteUpdateAck { update: _update } => _update.serialized_size(),
-                Self::RemoteUpdateSince {
-                    update: _update,
-                    frontiers: _frontiers,
-                } => _update.serialized_size() + _frontiers.serialized_size(),
+        ::bebop::LEN_SIZE + 1 +
+        match self {
+            FromRemote::Unknown => {
+                0
             }
+            Self::RemoteInitialSync {
+                snapshot: ref _snapshot,
+                awareness: ref _awareness,
+            }
+            => {
+                _snapshot.serialized_size() +
+                _awareness.serialized_size()
+            }
+            Self::RemoteUpdate {
+                update: ref _update,
+            }
+            => {
+                _update.serialized_size()
+            }
+            Self::RemoteAwareness {
+                awareness: ref _awareness,
+            }
+            => {
+                _awareness.serialized_size()
+            }
+            Self::RemoteSnapshot {
+                snapshot: ref _snapshot,
+            }
+            => {
+                _snapshot.serialized_size()
+            }
+            Self::RemoteUpdateAck {
+                id: ref _id,
+            }
+            => {
+                _id.serialized_size()
+            }
+            Self::RemoteUpdateSince {
+                update: ref _update,
+                vv: ref _vv,
+            }
+            => {
+                _update.serialized_size() +
+                _vv.serialized_size()
+            }
+        }
     }
 
     ::bebop::define_serialize_chained!(Self => |zelf, dest| {
@@ -229,8 +298,8 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromRemote<'raw> {
                 return Err(::bebop::SerializeError::CannotSerializeUnknownUnion);
             }
             Self::RemoteInitialSync {
-                snapshot:_snapshot,
-                awareness:_awareness,
+                snapshot: ref _snapshot,
+                awareness: ref _awareness,
             }
             => {
                 1u8._serialize_chained(dest)?;
@@ -238,41 +307,41 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromRemote<'raw> {
                 _awareness._serialize_chained(dest)?;
             }
             Self::RemoteUpdate {
-                update:_update,
+                update: ref _update,
             }
             => {
                 2u8._serialize_chained(dest)?;
                 _update._serialize_chained(dest)?;
             }
             Self::RemoteAwareness {
-                awareness:_awareness,
+                awareness: ref _awareness,
             }
             => {
                 3u8._serialize_chained(dest)?;
                 _awareness._serialize_chained(dest)?;
             }
             Self::RemoteSnapshot {
-                snapshot:_snapshot,
+                snapshot: ref _snapshot,
             }
             => {
                 4u8._serialize_chained(dest)?;
                 _snapshot._serialize_chained(dest)?;
             }
             Self::RemoteUpdateAck {
-                update:_update,
+                id: ref _id,
             }
             => {
                 5u8._serialize_chained(dest)?;
-                _update._serialize_chained(dest)?;
+                _id._serialize_chained(dest)?;
             }
             Self::RemoteUpdateSince {
-                update:_update,
-                frontiers:_frontiers,
+                update: ref _update,
+                vv: ref _vv,
             }
             => {
                 6u8._serialize_chained(dest)?;
                 _update._serialize_chained(dest)?;
-                _frontiers._serialize_chained(dest)?;
+                _vv._serialize_chained(dest)?;
             }
         }
         Ok(size)
@@ -297,25 +366,33 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromRemote<'raw> {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
 
-                FromRemote::RemoteUpdate { update: v0 }
+                FromRemote::RemoteUpdate {
+                    update: v0,
+                }
             }
             3 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
 
-                FromRemote::RemoteAwareness { awareness: v0 }
+                FromRemote::RemoteAwareness {
+                    awareness: v0,
+                }
             }
             4 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
 
-                FromRemote::RemoteSnapshot { snapshot: v0 }
+                FromRemote::RemoteSnapshot {
+                    snapshot: v0,
+                }
             }
             5 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                 i += read;
 
-                FromRemote::RemoteUpdateAck { update: v0 }
+                FromRemote::RemoteUpdateAck {
+                    id: v0,
+                }
             }
             6 => {
                 let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
@@ -325,7 +402,7 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromRemote<'raw> {
 
                 FromRemote::RemoteUpdateSince {
                     update: v0,
-                    frontiers: v1,
+                    vv: v1,
                 }
             }
             _ => {
@@ -336,10 +413,12 @@ impl<'raw> ::bebop::SubRecord<'raw> for FromRemote<'raw> {
         if !cfg!(feature = "unchecked") && i != len {
             debug_assert!(i > len);
             Err(::bebop::DeserializeError::CorruptFrame)
-        } else {
+        }
+        else {
             Ok((i, de))
         }
     }
+
 }
 
 impl<'raw> ::bebop::Record<'raw> for FromRemote<'raw> {}
@@ -351,12 +430,14 @@ pub struct Operation<'raw> {
 }
 
 impl<'raw> ::bebop::SubRecord<'raw> for Operation<'raw> {
-    const MIN_SERIALIZED_SIZE: usize = <::bebop::SliceWrapper<'raw, u8>>::MIN_SERIALIZED_SIZE
-        + <::bebop::Date>::MIN_SERIALIZED_SIZE;
+    const MIN_SERIALIZED_SIZE: usize =
+        <::bebop::SliceWrapper<'raw, u8>>::MIN_SERIALIZED_SIZE +
+        <::bebop::Date>::MIN_SERIALIZED_SIZE;
 
     #[inline]
     fn serialized_size(&self) -> usize {
-        self.update.serialized_size() + self.timestamp.serialized_size()
+        self.update.serialized_size() +
+        self.timestamp.serialized_size()
     }
 
     ::bebop::define_serialize_chained!(Self => |zelf, dest| {
@@ -378,13 +459,10 @@ impl<'raw> ::bebop::SubRecord<'raw> for Operation<'raw> {
         let (read, v1) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
         i += read;
 
-        Ok((
-            i,
-            Self {
-                update: v0,
-                timestamp: v1,
-            },
-        ))
+        Ok((i, Self {
+            update: v0,
+            timestamp: v1,
+        }))
     }
 }
 
@@ -396,7 +474,8 @@ pub struct OperationLog<'raw> {
 }
 
 impl<'raw> ::bebop::SubRecord<'raw> for OperationLog<'raw> {
-    const MIN_SERIALIZED_SIZE: usize = <::std::vec::Vec<Operation<'raw>>>::MIN_SERIALIZED_SIZE;
+    const MIN_SERIALIZED_SIZE: usize =
+        <::std::vec::Vec<Operation<'raw>>>::MIN_SERIALIZED_SIZE;
 
     #[inline]
     fn serialized_size(&self) -> usize {
@@ -419,7 +498,9 @@ impl<'raw> ::bebop::SubRecord<'raw> for OperationLog<'raw> {
         let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
         i += read;
 
-        Ok((i, Self { operations: v0 }))
+        Ok((i, Self {
+            operations: v0,
+        }))
     }
 }
 
@@ -431,7 +512,8 @@ pub struct InitializeFromSnapshotRequest<'raw> {
 }
 
 impl<'raw> ::bebop::SubRecord<'raw> for InitializeFromSnapshotRequest<'raw> {
-    const MIN_SERIALIZED_SIZE: usize = <::bebop::SliceWrapper<'raw, u8>>::MIN_SERIALIZED_SIZE;
+    const MIN_SERIALIZED_SIZE: usize =
+        <::bebop::SliceWrapper<'raw, u8>>::MIN_SERIALIZED_SIZE;
 
     #[inline]
     fn serialized_size(&self) -> usize {
@@ -454,7 +536,9 @@ impl<'raw> ::bebop::SubRecord<'raw> for InitializeFromSnapshotRequest<'raw> {
         let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
         i += read;
 
-        Ok((i, Self { snapshot: v0 }))
+        Ok((i, Self {
+            snapshot: v0,
+        }))
     }
 }
 
@@ -464,9 +548,9 @@ impl<'raw> ::bebop::Record<'raw> for InitializeFromSnapshotRequest<'raw> {}
 pub mod owned {
     #![allow(warnings)]
 
-    use bebop::FixedSized as _;
-    use core::convert::TryInto as _;
-    use std::io::Write as _;
+    use ::std::io::Write as _;
+    use ::core::convert::TryInto as _;
+    use ::bebop::FixedSized as _;
 
     #[derive(Clone, Debug, PartialEq)]
     pub enum FromPeer {
@@ -474,92 +558,153 @@ pub mod owned {
         Unknown,
 
         /// Discriminator 1
-        PeerUpdate { update: ::std::vec::Vec<u8> },
+        PeerUpdate {
+            updates: ::std::vec::Vec<::std::vec::Vec<u8>>,
+            id: String,
+        },
 
         /// Discriminator 2
-        PeerAwareness { awareness: ::std::vec::Vec<u8> },
+        PeerAwareness {
+            awareness: ::std::vec::Vec<u8>,
+        },
 
         /// Discriminator 3
-        PeerRequestSince { frontiers: ::std::vec::Vec<u8> },
+        PeerRequestSince {
+            vv: ::std::vec::Vec<u8>,
+        },
 
         /// Discriminator 4
-        PeerRequestSnapshot {},
+        PeerRequestSnapshot {
+        },
 
         /// Discriminator 5
-        PeerRegisterId { peerid: u64 },
+        PeerRegisterId {
+            peerid: u64,
+        },
     }
 
     impl<'raw> ::core::convert::From<super::FromPeer<'raw>> for FromPeer {
         fn from(value: super::FromPeer) -> Self {
             match value {
-                super::FromPeer::Unknown => Self::Unknown,
-                super::FromPeer::PeerUpdate { update: _update } => Self::PeerUpdate {
-                    update: _update.iter().map(|value| value).collect(),
-                },
+                super::FromPeer::Unknown => {
+                    Self::Unknown
+                }
+                super::FromPeer::PeerUpdate {
+                    updates: _updates,
+                    id: _id,
+                }
+                => {
+                    Self::PeerUpdate {
+                        updates: _updates.into_iter().map(|value| value.iter().map(|value| value).collect()).collect(),
+                        id: _id.into(),
+                    }
+                }
                 super::FromPeer::PeerAwareness {
                     awareness: _awareness,
-                } => Self::PeerAwareness {
-                    awareness: _awareness.iter().map(|value| value).collect(),
-                },
+                }
+                => {
+                    Self::PeerAwareness {
+                        awareness: _awareness.iter().map(|value| value).collect(),
+                    }
+                }
                 super::FromPeer::PeerRequestSince {
-                    frontiers: _frontiers,
-                } => Self::PeerRequestSince {
-                    frontiers: _frontiers.iter().map(|value| value).collect(),
-                },
-                super::FromPeer::PeerRequestSnapshot {} => Self::PeerRequestSnapshot {},
-                super::FromPeer::PeerRegisterId { peerid: _peerid } => {
-                    Self::PeerRegisterId { peerid: _peerid }
+                    vv: _vv,
+                }
+                => {
+                    Self::PeerRequestSince {
+                        vv: _vv.iter().map(|value| value).collect(),
+                    }
+                }
+                super::FromPeer::PeerRequestSnapshot {
+                }
+                => {
+                    Self::PeerRequestSnapshot {
+                    }
+                }
+                super::FromPeer::PeerRegisterId {
+                    peerid: _peerid,
+                }
+                => {
+                    Self::PeerRegisterId {
+                        peerid: _peerid,
+                    }
                 }
             }
         }
+
     }
     impl<'raw> ::bebop::SubRecord<'raw> for FromPeer {
         const MIN_SERIALIZED_SIZE: usize = ::bebop::LEN_SIZE + 1;
 
         fn serialized_size(&self) -> usize {
-            ::bebop::LEN_SIZE
-                + 1
-                + match self {
-                    FromPeer::Unknown => 0,
-                    Self::PeerUpdate { update: _update } => _update.serialized_size(),
-                    Self::PeerAwareness {
-                        awareness: _awareness,
-                    } => _awareness.serialized_size(),
-                    Self::PeerRequestSince {
-                        frontiers: _frontiers,
-                    } => _frontiers.serialized_size(),
-                    Self::PeerRequestSnapshot {} => 0,
-                    Self::PeerRegisterId { peerid: _peerid } => _peerid.serialized_size(),
+            ::bebop::LEN_SIZE + 1 +
+            match self {
+                FromPeer::Unknown => {
+                    0
                 }
+                Self::PeerUpdate {
+                    updates: ref _updates,
+                    id: ref _id,
+                }
+                => {
+                    _updates.serialized_size() +
+                    _id.serialized_size()
+                }
+                Self::PeerAwareness {
+                    awareness: ref _awareness,
+                }
+                => {
+                    _awareness.serialized_size()
+                }
+                Self::PeerRequestSince {
+                    vv: ref _vv,
+                }
+                => {
+                    _vv.serialized_size()
+                }
+                Self::PeerRequestSnapshot {
+                }
+                => {
+                    0
+                }
+                Self::PeerRegisterId {
+                    peerid: ref _peerid,
+                }
+                => {
+                    _peerid.serialized_size()
+                }
+            }
         }
 
         ::bebop::define_serialize_chained!(Self => |zelf, dest| {
             let size = zelf.serialized_size();
             ::bebop::write_len(dest, size - ::bebop::LEN_SIZE - 1)?;
-            match &zelf {
+            match zelf {
                 Self::Unknown => {
                     return Err(::bebop::SerializeError::CannotSerializeUnknownUnion);
                 }
                 Self::PeerUpdate {
-                    update:_update,
+                    updates: ref _updates,
+                    id: ref _id,
                 }
                 => {
                     1u8._serialize_chained(dest)?;
-                    _update._serialize_chained(dest)?;
+                    _updates._serialize_chained(dest)?;
+                    _id._serialize_chained(dest)?;
                 }
                 Self::PeerAwareness {
-                    awareness:_awareness,
+                    awareness: ref _awareness,
                 }
                 => {
                     2u8._serialize_chained(dest)?;
                     _awareness._serialize_chained(dest)?;
                 }
                 Self::PeerRequestSince {
-                    frontiers:_frontiers,
+                    vv: ref _vv,
                 }
                 => {
                     3u8._serialize_chained(dest)?;
-                    _frontiers._serialize_chained(dest)?;
+                    _vv._serialize_chained(dest)?;
                 }
                 Self::PeerRequestSnapshot {
                 }
@@ -567,7 +712,7 @@ pub mod owned {
                     4u8._serialize_chained(dest)?;
                 }
                 Self::PeerRegisterId {
-                    peerid:_peerid,
+                    peerid: ref _peerid,
                 }
                 => {
                     5u8._serialize_chained(dest)?;
@@ -584,27 +729,40 @@ pub mod owned {
                 1 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
+                    let (read, v1) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
+                    i += read;
 
-                    FromPeer::PeerUpdate { update: v0 }
+                    FromPeer::PeerUpdate {
+                        updates: v0,
+                        id: v1,
+                    }
                 }
                 2 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
 
-                    FromPeer::PeerAwareness { awareness: v0 }
+                    FromPeer::PeerAwareness {
+                        awareness: v0,
+                    }
                 }
                 3 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
 
-                    FromPeer::PeerRequestSince { frontiers: v0 }
+                    FromPeer::PeerRequestSince {
+                        vv: v0,
+                    }
                 }
-                4 => FromPeer::PeerRequestSnapshot {},
+                4 => {
+                    FromPeer::PeerRequestSnapshot {}
+                }
                 5 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
 
-                    FromPeer::PeerRegisterId { peerid: v0 }
+                    FromPeer::PeerRegisterId {
+                        peerid: v0,
+                    }
                 }
                 _ => {
                     i = len;
@@ -614,10 +772,12 @@ pub mod owned {
             if !cfg!(feature = "unchecked") && i != len {
                 debug_assert!(i > len);
                 Err(::bebop::DeserializeError::CorruptFrame)
-            } else {
+            }
+            else {
                 Ok((i, de))
             }
         }
+
     }
 
     impl<'raw> ::bebop::Record<'raw> for FromPeer {}
@@ -634,98 +794,156 @@ pub mod owned {
         },
 
         /// Discriminator 2
-        RemoteUpdate { update: ::std::vec::Vec<u8> },
+        RemoteUpdate {
+            update: ::std::vec::Vec<u8>,
+        },
 
         /// Discriminator 3
-        RemoteAwareness { awareness: ::std::vec::Vec<u8> },
+        RemoteAwareness {
+            awareness: ::std::vec::Vec<u8>,
+        },
 
         /// Discriminator 4
-        RemoteSnapshot { snapshot: ::std::vec::Vec<u8> },
+        RemoteSnapshot {
+            snapshot: ::std::vec::Vec<u8>,
+        },
 
         /// Discriminator 5
-        RemoteUpdateAck { update: ::std::vec::Vec<u8> },
+        RemoteUpdateAck {
+            id: String,
+        },
 
         /// Discriminator 6
         RemoteUpdateSince {
             update: ::std::vec::Vec<u8>,
-            frontiers: ::std::vec::Vec<u8>,
+            vv: ::std::vec::Vec<u8>,
         },
     }
 
     impl<'raw> ::core::convert::From<super::FromRemote<'raw>> for FromRemote {
         fn from(value: super::FromRemote) -> Self {
             match value {
-                super::FromRemote::Unknown => Self::Unknown,
+                super::FromRemote::Unknown => {
+                    Self::Unknown
+                }
                 super::FromRemote::RemoteInitialSync {
                     snapshot: _snapshot,
                     awareness: _awareness,
-                } => Self::RemoteInitialSync {
-                    snapshot: _snapshot.iter().map(|value| value).collect(),
-                    awareness: _awareness.iter().map(|value| value).collect(),
-                },
-                super::FromRemote::RemoteUpdate { update: _update } => Self::RemoteUpdate {
-                    update: _update.iter().map(|value| value).collect(),
-                },
+                }
+                => {
+                    Self::RemoteInitialSync {
+                        snapshot: _snapshot.iter().map(|value| value).collect(),
+                        awareness: _awareness.iter().map(|value| value).collect(),
+                    }
+                }
+                super::FromRemote::RemoteUpdate {
+                    update: _update,
+                }
+                => {
+                    Self::RemoteUpdate {
+                        update: _update.iter().map(|value| value).collect(),
+                    }
+                }
                 super::FromRemote::RemoteAwareness {
                     awareness: _awareness,
-                } => Self::RemoteAwareness {
-                    awareness: _awareness.iter().map(|value| value).collect(),
-                },
+                }
+                => {
+                    Self::RemoteAwareness {
+                        awareness: _awareness.iter().map(|value| value).collect(),
+                    }
+                }
                 super::FromRemote::RemoteSnapshot {
                     snapshot: _snapshot,
-                } => Self::RemoteSnapshot {
-                    snapshot: _snapshot.iter().map(|value| value).collect(),
-                },
-                super::FromRemote::RemoteUpdateAck { update: _update } => Self::RemoteUpdateAck {
-                    update: _update.iter().map(|value| value).collect(),
-                },
+                }
+                => {
+                    Self::RemoteSnapshot {
+                        snapshot: _snapshot.iter().map(|value| value).collect(),
+                    }
+                }
+                super::FromRemote::RemoteUpdateAck {
+                    id: _id,
+                }
+                => {
+                    Self::RemoteUpdateAck {
+                        id: _id.into(),
+                    }
+                }
                 super::FromRemote::RemoteUpdateSince {
                     update: _update,
-                    frontiers: _frontiers,
-                } => Self::RemoteUpdateSince {
-                    update: _update.iter().map(|value| value).collect(),
-                    frontiers: _frontiers.iter().map(|value| value).collect(),
-                },
+                    vv: _vv,
+                }
+                => {
+                    Self::RemoteUpdateSince {
+                        update: _update.iter().map(|value| value).collect(),
+                        vv: _vv.iter().map(|value| value).collect(),
+                    }
+                }
             }
         }
+
     }
     impl<'raw> ::bebop::SubRecord<'raw> for FromRemote {
         const MIN_SERIALIZED_SIZE: usize = ::bebop::LEN_SIZE + 1;
 
         fn serialized_size(&self) -> usize {
-            ::bebop::LEN_SIZE
-                + 1
-                + match self {
-                    FromRemote::Unknown => 0,
-                    Self::RemoteInitialSync {
-                        snapshot: _snapshot,
-                        awareness: _awareness,
-                    } => _snapshot.serialized_size() + _awareness.serialized_size(),
-                    Self::RemoteUpdate { update: _update } => _update.serialized_size(),
-                    Self::RemoteAwareness {
-                        awareness: _awareness,
-                    } => _awareness.serialized_size(),
-                    Self::RemoteSnapshot {
-                        snapshot: _snapshot,
-                    } => _snapshot.serialized_size(),
-                    Self::RemoteUpdateAck { update: _update } => _update.serialized_size(),
-                    Self::RemoteUpdateSince {
-                        update: _update,
-                        frontiers: _frontiers,
-                    } => _update.serialized_size() + _frontiers.serialized_size(),
+            ::bebop::LEN_SIZE + 1 +
+            match self {
+                FromRemote::Unknown => {
+                    0
                 }
+                Self::RemoteInitialSync {
+                    snapshot: ref _snapshot,
+                    awareness: ref _awareness,
+                }
+                => {
+                    _snapshot.serialized_size() +
+                    _awareness.serialized_size()
+                }
+                Self::RemoteUpdate {
+                    update: ref _update,
+                }
+                => {
+                    _update.serialized_size()
+                }
+                Self::RemoteAwareness {
+                    awareness: ref _awareness,
+                }
+                => {
+                    _awareness.serialized_size()
+                }
+                Self::RemoteSnapshot {
+                    snapshot: ref _snapshot,
+                }
+                => {
+                    _snapshot.serialized_size()
+                }
+                Self::RemoteUpdateAck {
+                    id: ref _id,
+                }
+                => {
+                    _id.serialized_size()
+                }
+                Self::RemoteUpdateSince {
+                    update: ref _update,
+                    vv: ref _vv,
+                }
+                => {
+                    _update.serialized_size() +
+                    _vv.serialized_size()
+                }
+            }
         }
 
         ::bebop::define_serialize_chained!(Self => |zelf, dest| {
             let size = zelf.serialized_size();
             ::bebop::write_len(dest, size - ::bebop::LEN_SIZE - 1)?;
-            match &zelf {
+            match zelf {
                 Self::Unknown => {
                     return Err(::bebop::SerializeError::CannotSerializeUnknownUnion);
                 }
                 Self::RemoteInitialSync {
-                    snapshot:_snapshot,
-                    awareness:_awareness,
+                    snapshot: ref _snapshot,
+                    awareness: ref _awareness,
                 }
                 => {
                     1u8._serialize_chained(dest)?;
@@ -733,41 +951,41 @@ pub mod owned {
                     _awareness._serialize_chained(dest)?;
                 }
                 Self::RemoteUpdate {
-                    update:_update,
+                    update: ref _update,
                 }
                 => {
                     2u8._serialize_chained(dest)?;
                     _update._serialize_chained(dest)?;
                 }
                 Self::RemoteAwareness {
-                    awareness:_awareness,
+                    awareness: ref _awareness,
                 }
                 => {
                     3u8._serialize_chained(dest)?;
                     _awareness._serialize_chained(dest)?;
                 }
                 Self::RemoteSnapshot {
-                    snapshot:_snapshot,
+                    snapshot: ref _snapshot,
                 }
                 => {
                     4u8._serialize_chained(dest)?;
                     _snapshot._serialize_chained(dest)?;
                 }
                 Self::RemoteUpdateAck {
-                    update:_update,
+                    id: ref _id,
                 }
                 => {
                     5u8._serialize_chained(dest)?;
-                    _update._serialize_chained(dest)?;
+                    _id._serialize_chained(dest)?;
                 }
                 Self::RemoteUpdateSince {
-                    update:_update,
-                    frontiers:_frontiers,
+                    update: ref _update,
+                    vv: ref _vv,
                 }
                 => {
                     6u8._serialize_chained(dest)?;
                     _update._serialize_chained(dest)?;
-                    _frontiers._serialize_chained(dest)?;
+                    _vv._serialize_chained(dest)?;
                 }
             }
             Ok(size)
@@ -792,25 +1010,33 @@ pub mod owned {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
 
-                    FromRemote::RemoteUpdate { update: v0 }
+                    FromRemote::RemoteUpdate {
+                        update: v0,
+                    }
                 }
                 3 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
 
-                    FromRemote::RemoteAwareness { awareness: v0 }
+                    FromRemote::RemoteAwareness {
+                        awareness: v0,
+                    }
                 }
                 4 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
 
-                    FromRemote::RemoteSnapshot { snapshot: v0 }
+                    FromRemote::RemoteSnapshot {
+                        snapshot: v0,
+                    }
                 }
                 5 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
                     i += read;
 
-                    FromRemote::RemoteUpdateAck { update: v0 }
+                    FromRemote::RemoteUpdateAck {
+                        id: v0,
+                    }
                 }
                 6 => {
                     let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
@@ -820,7 +1046,7 @@ pub mod owned {
 
                     FromRemote::RemoteUpdateSince {
                         update: v0,
-                        frontiers: v1,
+                        vv: v1,
                     }
                 }
                 _ => {
@@ -831,10 +1057,12 @@ pub mod owned {
             if !cfg!(feature = "unchecked") && i != len {
                 debug_assert!(i > len);
                 Err(::bebop::DeserializeError::CorruptFrame)
-            } else {
+            }
+            else {
                 Ok((i, de))
             }
         }
+
     }
 
     impl<'raw> ::bebop::Record<'raw> for FromRemote {}
@@ -856,11 +1084,13 @@ pub mod owned {
 
     impl<'raw> ::bebop::SubRecord<'raw> for Operation {
         const MIN_SERIALIZED_SIZE: usize =
-            <::std::vec::Vec<u8>>::MIN_SERIALIZED_SIZE + <::bebop::Date>::MIN_SERIALIZED_SIZE;
+            <::std::vec::Vec<u8>>::MIN_SERIALIZED_SIZE +
+            <::bebop::Date>::MIN_SERIALIZED_SIZE;
 
         #[inline]
         fn serialized_size(&self) -> usize {
-            self.update.serialized_size() + self.timestamp.serialized_size()
+            self.update.serialized_size() +
+            self.timestamp.serialized_size()
         }
 
         ::bebop::define_serialize_chained!(Self => |zelf, dest| {
@@ -882,13 +1112,10 @@ pub mod owned {
             let (read, v1) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
             i += read;
 
-            Ok((
-                i,
-                Self {
-                    update: v0,
-                    timestamp: v1,
-                },
-            ))
+            Ok((i, Self {
+                update: v0,
+                timestamp: v1,
+            }))
         }
     }
 
@@ -902,17 +1129,14 @@ pub mod owned {
     impl<'raw> ::core::convert::From<super::OperationLog<'raw>> for OperationLog {
         fn from(value: super::OperationLog) -> Self {
             Self {
-                operations: value
-                    .operations
-                    .into_iter()
-                    .map(|value| value.into())
-                    .collect(),
+                operations: value.operations.into_iter().map(|value| value.into()).collect(),
             }
         }
     }
 
     impl<'raw> ::bebop::SubRecord<'raw> for OperationLog {
-        const MIN_SERIALIZED_SIZE: usize = <::std::vec::Vec<Operation>>::MIN_SERIALIZED_SIZE;
+        const MIN_SERIALIZED_SIZE: usize =
+            <::std::vec::Vec<Operation>>::MIN_SERIALIZED_SIZE;
 
         #[inline]
         fn serialized_size(&self) -> usize {
@@ -935,7 +1159,9 @@ pub mod owned {
             let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
             i += read;
 
-            Ok((i, Self { operations: v0 }))
+            Ok((i, Self {
+                operations: v0,
+            }))
         }
     }
 
@@ -946,9 +1172,7 @@ pub mod owned {
         pub snapshot: ::std::vec::Vec<u8>,
     }
 
-    impl<'raw> ::core::convert::From<super::InitializeFromSnapshotRequest<'raw>>
-        for InitializeFromSnapshotRequest
-    {
+    impl<'raw> ::core::convert::From<super::InitializeFromSnapshotRequest<'raw>> for InitializeFromSnapshotRequest {
         fn from(value: super::InitializeFromSnapshotRequest) -> Self {
             Self {
                 snapshot: value.snapshot.iter().map(|value| value).collect(),
@@ -957,7 +1181,8 @@ pub mod owned {
     }
 
     impl<'raw> ::bebop::SubRecord<'raw> for InitializeFromSnapshotRequest {
-        const MIN_SERIALIZED_SIZE: usize = <::std::vec::Vec<u8>>::MIN_SERIALIZED_SIZE;
+        const MIN_SERIALIZED_SIZE: usize =
+            <::std::vec::Vec<u8>>::MIN_SERIALIZED_SIZE;
 
         #[inline]
         fn serialized_size(&self) -> usize {
@@ -980,9 +1205,10 @@ pub mod owned {
             let (read, v0) = ::bebop::SubRecord::_deserialize_chained(&raw[i..])?;
             i += read;
 
-            Ok((i, Self { snapshot: v0 }))
+            Ok((i, Self {
+                snapshot: v0,
+            }))
         }
     }
 
-    impl<'raw> ::bebop::Record<'raw> for InitializeFromSnapshotRequest {}
-}
+    impl<'raw> ::bebop::Record<'raw> for InitializeFromSnapshotRequest {}}

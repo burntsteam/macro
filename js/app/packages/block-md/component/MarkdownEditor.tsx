@@ -217,8 +217,7 @@ function getBlankMarkdownPlaceholder(canEdit: boolean) {
 
 export function MarkdownEditor(props: {
   autoFocusOnMount?: boolean;
-  loroManager: Accessor<LoroManager | undefined>;
-  mustBeConnected?: boolean;
+  loroManager: LoroManager;
 }) {
   const blockData = blockDataSignal.get;
   const blockId = useBlockId();
@@ -231,7 +230,7 @@ export function MarkdownEditor(props: {
   const saveMarkdownDocument = useSaveMarkdownDocument();
   const setMdStore = mdStore.set;
   const md = mdStore.get;
-  const canEdit = useCanEdit(props.mustBeConnected);
+  const canEdit = useCanEdit();
   const canComment = useCanComment();
   const [blockElement] = blockElementSignal;
   const [findAndReplaceStore, setFindAndReplaceStore] = FindAndReplaceStore;
@@ -510,7 +509,7 @@ export function MarkdownEditor(props: {
     if (!IS_SYNC()) {
       return createPeerIdValidator(() => undefined, false);
     }
-    const peerId = () => props.loroManager()?.getPeerIdStr();
+    const peerId = () => props.loroManager.getPeerIdStr();
     return createPeerIdValidator(peerId, true);
   };
 
@@ -521,7 +520,7 @@ export function MarkdownEditor(props: {
     .markdownShortcuts()
     .delete()
     .state<EditorState>(setState, 'json')
-    .history(400, props.loroManager())
+    .history(400, props.loroManager)
     .use(tabIndentationPlugin())
     .use(selectionDataPlugin(lexicalWrapper))
     .use(horizontalRulePlugin())
@@ -629,7 +628,7 @@ export function MarkdownEditor(props: {
   }
 
   if (ENABLE_MARKDOWN_LIVE_COLLABORATION) {
-    const peerId = () => props.loroManager()?.getPeerIdStr();
+    const peerId = () => props.loroManager.getPeerIdStr();
     plugins.use(
       peerIdPlugin({
         peerId,
