@@ -19,6 +19,7 @@ import type {
 } from '@app/component/next-soup/filters/filter-store';
 import type { SetPredicatesInput } from '@app/component/next-soup/filters/filter-store/predicates-store';
 import { useSoup } from '@app/component/next-soup/soup-context';
+import { registerDocumentsFilterSplit } from '@app/component/next-soup/soup-view/documents-filter-controllers';
 import { EmptyState } from '@app/component/next-soup/soup-view/empty-states';
 import { InboxSelector } from '@app/component/next-soup/soup-view/filters-bar/inbox-selector';
 import { SoupFiltersBar } from '@app/component/next-soup/soup-view/filters-bar/soup-filters-bar';
@@ -122,6 +123,7 @@ import {
   Match,
   on,
   onCleanup,
+  onMount,
   Show,
   Suspense,
   Switch,
@@ -455,6 +457,32 @@ export const SoupView = (props: SoupViewProps) => {
 
       soupView.setActiveTab(initialActiveTab);
     });
+  });
+
+  onMount(() => {
+    if (contentId !== 'documents') return;
+
+    const markdownQuery: Query = { include: { fileAssoc: ['assoc:md'] } };
+    const dispose = registerDocumentsFilterSplit(panel.handle.id, {
+      toggleMarkdownFilter: () => {
+        if (soup.predicates.isActive('doc-markdown')) {
+          soupView.queryFilters.remove(markdownQuery);
+          soup.predicates.set(({ andIds, orIds }) => ({
+            and: andIds,
+            or: orIds.filter((id) => id !== 'doc-markdown'),
+          }));
+          return;
+        }
+
+        soupView.queryFilters.add(markdownQuery);
+        soup.predicates.set(({ andIds, orIds }) => ({
+          and: andIds,
+          or: [...new Set([...orIds, 'doc-markdown'])],
+        }));
+      },
+    });
+
+    onCleanup(dispose);
   });
 
   createEffect(() => {
