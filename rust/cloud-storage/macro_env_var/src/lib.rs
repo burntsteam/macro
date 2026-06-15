@@ -5,6 +5,7 @@ use thiserror::Error;
 
 const APP_SECRETS_JSON_ENV: &str = "APP_SECRETS_JSON";
 
+#[allow(dead_code)]
 fn read_std_env(s: &'static str) -> Result<String, std::env::VarError> {
     std::env::var(s)
 }
@@ -21,11 +22,6 @@ where
         serde_json::Value::String(value) => Some(value.clone()),
         value => Some(value.to_string()),
     }
-}
-
-/// Read a value from `APP_SECRETS_JSON` without mutating the process environment.
-pub fn read_from_app_secrets_json(key: &'static str) -> Option<String> {
-    read_from_app_secrets_json_with(key, read_std_env)
 }
 
 fn read_env_with<F>(s: &'static str, read_var: F) -> Result<String, VarNameErr>
@@ -78,11 +74,11 @@ mod testing_harness {
         }
     }
 
-    pub fn read_env(s: &'static str) -> Result<String, VarNameErr> {
+    pub(crate) fn read_env(s: &'static str) -> Result<String, VarNameErr> {
         read_env_with(s, get_env)
     }
 
-    pub fn maybe_read_env(s: &'static str) -> Option<String> {
+    pub(crate) fn maybe_read_env(s: &'static str) -> Option<String> {
         maybe_read_env_with(s, get_env)
     }
 
@@ -98,9 +94,9 @@ mod testing_harness {
 }
 
 #[cfg(test)]
-pub use testing_harness::maybe_read_env;
+pub(crate) use testing_harness::maybe_read_env;
 #[cfg(test)]
-pub use testing_harness::read_env;
+pub(crate) use testing_harness::read_env;
 
 #[cfg(not(test))]
 pub fn read_env(s: &'static str) -> Result<String, VarNameErr> {
