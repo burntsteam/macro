@@ -102,7 +102,7 @@ export default function GlobalShortcuts() {
 
   useHotkeyAnalytics();
 
-  const { openSettings, closeSettings, settingsOpen, setActiveTabId } =
+  const { openSettings, settingsOpen, setActiveTabId, toggleSettings } =
     useSettingsState();
   const logout = useLogout();
 
@@ -209,23 +209,11 @@ export default function GlobalShortcuts() {
     keyDownHandler: createNewSplit,
   });
 
-  const openSettingsInNewSplit = (tab?: SettingsTab) => {
+  // Settings open in a modal by default; tab selection is applied even when
+  // settings are already open.
+  const openSettingsModal = (tab?: SettingsTab) => {
     if (settingsOpen()) {
       if (tab) setActiveTabId(tab);
-      return;
-    }
-    if (canFit()) {
-      if (tab) setActiveTabId(tab);
-      analytics.track('split_created', { from: 'global_hotkey' });
-      openWithSplit(
-        { type: 'component', id: 'settings' },
-        {
-          referredFrom: 'hotkey',
-          allowDuplicate: true,
-          preferNewSplit: true,
-          mergeHistory: false,
-        }
-      );
       return;
     }
     openSettings(tab);
@@ -237,8 +225,7 @@ export default function GlobalShortcuts() {
     scopeId: 'global',
     description: 'Toggle settings',
     keyDownHandler: () => {
-      if (settingsOpen()) closeSettings();
-      else openSettingsInNewSplit();
+      toggleSettings();
       return true;
     },
     runWithInputFocused: true,
@@ -249,7 +236,7 @@ export default function GlobalShortcuts() {
     description: 'Account',
     icon: UserIcon,
     keyDownHandler: () => {
-      openSettingsInNewSplit('Account');
+      openSettingsModal('Account');
       return true;
     },
     runWithInputFocused: true,
