@@ -86,6 +86,7 @@ import { currentThemeId } from '../../theme/signals/themeSignals';
 import {
   applyTheme,
   ensureMinimalThemeContrast,
+  systemThemeEffect,
 } from '../../theme/utils/themeUtils';
 import { Login } from './auth/Login';
 import { setCookie } from './auth/Shared';
@@ -419,6 +420,9 @@ function UserInfoSideEffects() {
 
   // Set user info for observability and analytics
   const userInfo = useUserInfo();
+
+  // Keep the active theme following the OS color scheme when auto-detect is on.
+  systemThemeEffect();
 
   let identified = false;
   createEffect(
