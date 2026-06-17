@@ -1,4 +1,4 @@
-//! Attachment inbound adapter for the comms domain.
+//! Attachment inbound adapter for the channels domain.
 
 use std::fmt::Write;
 use std::sync::Arc;
@@ -12,30 +12,32 @@ use entity_access::domain::{models::MemberParticipantRole, ports::EntityAccessSe
 use futures::future::join_all;
 use macro_user_id::user_id::MacroUserIdStr;
 use model_entity::{Entity, EntityType};
-use models_comms::channel::{ChannelId, ChannelMessage};
 use non_empty::NonEmpty;
+use uuid::Uuid;
 
-use crate::domain::ports::CommsRepo;
+use crate::domain::{models::RecentChannelMessage, ports::ChannelAttachmentRepo};
 
 const MESSAGE_LIMIT: u32 = 50;
 
 /// Resolves channel IDs into [`Attachments`].
-pub struct CommsAttachmentService<C, E> {
-    comms_repo: Arc<C>,
+pub struct ChannelAttachmentService<C, E> {
+    channel_repo: Arc<C>,
     entity_access_service: Arc<E>,
 }
 
-impl<C, E> CommsAttachmentService<C, E> {
-    /// Create a new comms attachment service.
-    pub fn new(comms_repo: Arc<C>, entity_access_service: Arc<E>) -> Self {
+impl<C, E> ChannelAttachmentService<C, E> {
+    /// Create a new channel attachment service.
+    pub fn new(channel_repo: Arc<C>, entity_access_service: Arc<E>) -> Self {
         Self {
-            comms_repo,
+            channel_repo,
             entity_access_service,
         }
     }
 }
 
-impl<C: CommsRepo, E: EntityAccessService> AttachmentService for CommsAttachmentService<C, E> {
+impl<C: ChannelAttachmentRepo, E: EntityAccessService> AttachmentService
+    for ChannelAttachmentService<C, E>
+{
     #[tracing::instrument(skip_all)]
     async fn resolve_attachments<'a>(
         &self,
@@ -58,7 +60,7 @@ impl<C: CommsRepo, E: EntityAccessService> AttachmentService for CommsAttachment
     }
 }
 
-impl<C: CommsRepo, E: EntityAccessService> CommsAttachmentService<C, E> {
+impl<C: ChannelAttachmentRepo, E: EntityAccessService> ChannelAttachmentService<C, E> {
     #[tracing::instrument(skip(self), err)]
     async fn resolve_one(
         &self,
@@ -66,8 +68,7 @@ impl<C: CommsRepo, E: EntityAccessService> CommsAttachmentService<C, E> {
         entity: &Entity<'_>,
     ) -> Result<AttachmentContent<'static>, AttachmentError> {
         let id = &*entity.entity_id;
-        let channel_id =
-            ChannelId(uuid::Uuid::parse_str(id).map_err(|e| AttachmentError::Internal(e.into()))?);
+        let channel_id = Uuid::parse_str(id).map_err(|e| AttachmentError::Internal(e.into()))?;
 
         self.entity_access_service
             .generate_entity_access_receipt::<MemberParticipantRole>(
@@ -80,14 +81,14 @@ impl<C: CommsRepo, E: EntityAccessService> CommsAttachmentService<C, E> {
             .map_err(|e| AttachmentError::PermissionDenied(Box::new(e)))?;
 
         let (name, messages) = tokio::join!(
-            self.comms_repo.get_channel_name(channel_id),
-            self.comms_repo
-                .get_recent_messages(channel_id, MESSAGE_LIMIT),
+            self.channel_repo
+                .get_channel_name_for_attachment(channel_id),
+            self.channel_repo
+                .get_recent_messages_for_attachment(channel_id, MESSAGE_LIMIT),
         );
 
-        let name = name.map_err(|e| AttachmentError::Internal(anyhow::anyhow!("{e:#}")))?;
-        let mut messages =
-            messages.map_err(|e| AttachmentError::Internal(anyhow::anyhow!("{e:#}")))?;
+        let name = name.map_err(|e| AttachmentError::Internal(e.into()))?;
+        let mut messages = messages.map_err(|e| AttachmentError::Internal(e.into()))?;
         messages.reverse();
 
         let parts = format_messages(&messages);
@@ -107,7 +108,7 @@ impl<C: CommsRepo, E: EntityAccessService> CommsAttachmentService<C, E> {
     }
 }
 
-fn format_messages(messages: &[ChannelMessage]) -> String {
+fn format_messages(messages: &[RecentChannelMessage]) -> String {
     if messages.is_empty() {
         return "(no messages)".to_string();
     }

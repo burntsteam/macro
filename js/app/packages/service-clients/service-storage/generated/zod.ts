@@ -7356,16 +7356,29 @@ export const getItemsSoupResponse = zod.object({
                 channel_type: zod
                   .enum(['public', 'private', 'direct_message', 'team'])
                   .describe('Type of channel.'),
-                created_at: zod.iso.datetime({}),
-                id: zod.uuid(),
-                name: zod.string().nullish(),
+                created_at: zod.iso
+                  .datetime({})
+                  .describe('timestamp of when the channel was created'),
+                id: zod.uuid().describe('uuid of the channel'),
+                name: zod
+                  .string()
+                  .nullish()
+                  .describe('string name of the channel'),
                 org_id: zod
                   .number()
                   .min(getItemsSoupResponseItemsItemDataChannelOrgIdMin)
-                  .nullish(),
-                owner_id: zod.string(),
-                team_id: zod.uuid().nullish(),
-                updated_at: zod.iso.datetime({}),
+                  .nullish()
+                  .describe('id of the organization this channel belongs too'),
+                owner_id: zod
+                  .string()
+                  .describe('id of the user who created the channel'),
+                team_id: zod
+                  .uuid()
+                  .nullish()
+                  .describe('id of the team this channel belongs to'),
+                updated_at: zod.iso
+                  .datetime({})
+                  .describe('timestamp of when the channel was last updated'),
               }),
               participants: zod.array(
                 zod.object({
@@ -9257,16 +9270,29 @@ export const postItemsSoupResponse = zod.object({
                 channel_type: zod
                   .enum(['public', 'private', 'direct_message', 'team'])
                   .describe('Type of channel.'),
-                created_at: zod.iso.datetime({}),
-                id: zod.uuid(),
-                name: zod.string().nullish(),
+                created_at: zod.iso
+                  .datetime({})
+                  .describe('timestamp of when the channel was created'),
+                id: zod.uuid().describe('uuid of the channel'),
+                name: zod
+                  .string()
+                  .nullish()
+                  .describe('string name of the channel'),
                 org_id: zod
                   .number()
                   .min(postItemsSoupResponseItemsItemDataChannelOrgIdMin)
-                  .nullish(),
-                owner_id: zod.string(),
-                team_id: zod.uuid().nullish(),
-                updated_at: zod.iso.datetime({}),
+                  .nullish()
+                  .describe('id of the organization this channel belongs too'),
+                owner_id: zod
+                  .string()
+                  .describe('id of the user who created the channel'),
+                team_id: zod
+                  .uuid()
+                  .nullish()
+                  .describe('id of the team this channel belongs to'),
+                updated_at: zod.iso
+                  .datetime({})
+                  .describe('timestamp of when the channel was last updated'),
               }),
               participants: zod.array(
                 zod.object({
@@ -10718,16 +10744,29 @@ export const postItemsSoupAstResponse = zod.object({
                 channel_type: zod
                   .enum(['public', 'private', 'direct_message', 'team'])
                   .describe('Type of channel.'),
-                created_at: zod.iso.datetime({}),
-                id: zod.uuid(),
-                name: zod.string().nullish(),
+                created_at: zod.iso
+                  .datetime({})
+                  .describe('timestamp of when the channel was created'),
+                id: zod.uuid().describe('uuid of the channel'),
+                name: zod
+                  .string()
+                  .nullish()
+                  .describe('string name of the channel'),
                 org_id: zod
                   .number()
                   .min(postItemsSoupAstResponseItemsItemDataChannelOrgIdMin)
-                  .nullish(),
-                owner_id: zod.string(),
-                team_id: zod.uuid().nullish(),
-                updated_at: zod.iso.datetime({}),
+                  .nullish()
+                  .describe('id of the organization this channel belongs too'),
+                owner_id: zod
+                  .string()
+                  .describe('id of the user who created the channel'),
+                team_id: zod
+                  .uuid()
+                  .nullish()
+                  .describe('id of the team this channel belongs to'),
+                updated_at: zod.iso
+                  .datetime({})
+                  .describe('timestamp of when the channel was last updated'),
               }),
               participants: zod.array(
                 zod.object({
@@ -12465,18 +12504,37 @@ export const postItemsSoupAstGroupedResponse = zod
                         channel_type: zod
                           .enum(['public', 'private', 'direct_message', 'team'])
                           .describe('Type of channel.'),
-                        created_at: zod.iso.datetime({}),
-                        id: zod.uuid(),
-                        name: zod.string().nullish(),
+                        created_at: zod.iso
+                          .datetime({})
+                          .describe(
+                            'timestamp of when the channel was created'
+                          ),
+                        id: zod.uuid().describe('uuid of the channel'),
+                        name: zod
+                          .string()
+                          .nullish()
+                          .describe('string name of the channel'),
                         org_id: zod
                           .number()
                           .min(
                             postItemsSoupAstGroupedResponseItemsDataChannelOrgIdMin
                           )
-                          .nullish(),
-                        owner_id: zod.string(),
-                        team_id: zod.uuid().nullish(),
-                        updated_at: zod.iso.datetime({}),
+                          .nullish()
+                          .describe(
+                            'id of the organization this channel belongs too'
+                          ),
+                        owner_id: zod
+                          .string()
+                          .describe('id of the user who created the channel'),
+                        team_id: zod
+                          .uuid()
+                          .nullish()
+                          .describe('id of the team this channel belongs to'),
+                        updated_at: zod.iso
+                          .datetime({})
+                          .describe(
+                            'timestamp of when the channel was last updated'
+                          ),
                       }),
                       participants: zod.array(
                         zod.object({
@@ -13920,18 +13978,37 @@ export const postItemsSoupAstGroupedResponse = zod
                         channel_type: zod
                           .enum(['public', 'private', 'direct_message', 'team'])
                           .describe('Type of channel.'),
-                        created_at: zod.iso.datetime({}),
-                        id: zod.uuid(),
-                        name: zod.string().nullish(),
+                        created_at: zod.iso
+                          .datetime({})
+                          .describe(
+                            'timestamp of when the channel was created'
+                          ),
+                        id: zod.uuid().describe('uuid of the channel'),
+                        name: zod
+                          .string()
+                          .nullish()
+                          .describe('string name of the channel'),
                         org_id: zod
                           .number()
                           .min(
                             postItemsSoupAstGroupedResponseItemsDataChannelOrgIdMinOne
                           )
-                          .nullish(),
-                        owner_id: zod.string(),
-                        team_id: zod.uuid().nullish(),
-                        updated_at: zod.iso.datetime({}),
+                          .nullish()
+                          .describe(
+                            'id of the organization this channel belongs too'
+                          ),
+                        owner_id: zod
+                          .string()
+                          .describe('id of the user who created the channel'),
+                        team_id: zod
+                          .uuid()
+                          .nullish()
+                          .describe('id of the team this channel belongs to'),
+                        updated_at: zod.iso
+                          .datetime({})
+                          .describe(
+                            'timestamp of when the channel was last updated'
+                          ),
                       }),
                       participants: zod.array(
                         zod.object({

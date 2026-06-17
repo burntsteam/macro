@@ -1,19 +1,12 @@
 //! Batch channel-name resolution backed by Postgres.
-//!
-//! Queries channels, their participants, and user display names, then
-//! delegates to the canonical [`resolve_channel_name`] domain function.
 
 use std::collections::{HashMap, HashSet};
 
-use chrono::{DateTime, Utc};
-use doppleganger::Mirror;
-use macro_user_id::{cowlike::CowLike, user_id::MacroUserIdStr};
-use models_comms::channel::{ChannelId, ChannelParticipant, ParticipantRole};
+use macro_user_id::user_id::MacroUserIdStr;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::models::channel_name::{NameLookup, resolve_channel_name};
-use crate::outbound::postgres::comms_repo::ChannelType;
+use crate::domain::models::ChannelType;
 
 /// Batch-resolve display names for a list of channel ids from the perspective
 /// of `viewer_user_id`. The viewer is only used to pick the right "other
@@ -41,25 +34,23 @@ pub async fn batch_resolve_channel_names<'a>(
     .fetch_all(pool)
     .await?;
 
-    let channels: HashMap<Uuid, (Option<String>, models_comms::channel::ChannelType)> =
-        channel_rows
-            .into_iter()
-            .map(|r| (r.id, (r.name, ChannelType::mirror(r.channel_type))))
-            .collect();
+    let channels: HashMap<Uuid, (Option<String>, ChannelType)> = channel_rows
+        .into_iter()
+        .map(|r| (r.id, (r.name, r.channel_type)))
+        .collect();
 
-    // Channels that need participant-derived names (DMs, unnamed privates).
     let needs_participants: Vec<Uuid> = channels
         .iter()
         .filter(|(_, (name, ct))| {
-            matches!(ct, models_comms::channel::ChannelType::DirectMessage)
-                || (matches!(ct, models_comms::channel::ChannelType::Private)
+            matches!(ct, ChannelType::DirectMessage)
+                || (matches!(ct, ChannelType::Private)
                     && name.as_ref().is_none_or(|n| n.trim().is_empty()))
         })
         .map(|(id, _)| *id)
         .collect();
 
     let (participants_by_channel, name_lookup) = if needs_participants.is_empty() {
-        (HashMap::new(), NameLookup::new())
+        (HashMap::new(), HashMap::new())
     } else {
         load_participants_and_names(pool, &needs_participants).await?
     };
@@ -69,11 +60,11 @@ pub async fn batch_resolve_channel_names<'a>(
         let empty = Vec::new();
         let participants = participants_by_channel.get(channel_id).unwrap_or(&empty);
         let resolved_name = resolve_channel_name(
-            channel_type,
+            *channel_type,
             name.as_deref(),
+            *channel_id,
+            viewer_user_id.as_ref(),
             participants,
-            &ChannelId(*channel_id),
-            viewer_user_id.copied(),
             &name_lookup,
         );
         resolved.insert(*channel_id, resolved_name);
@@ -85,7 +76,7 @@ pub async fn batch_resolve_channel_names<'a>(
 async fn load_participants_and_names(
     pool: &PgPool,
     channel_ids: &[Uuid],
-) -> Result<(HashMap<Uuid, Vec<ChannelParticipant>>, NameLookup), sqlx::Error> {
+) -> Result<(HashMap<Uuid, Vec<String>>, HashMap<String, String>), sqlx::Error> {
     let participant_rows = sqlx::query!(
         r#"
         SELECT channel_id, user_id
@@ -97,24 +88,14 @@ async fn load_participants_and_names(
     .fetch_all(pool)
     .await?;
 
-    let mut participants_by_channel: HashMap<Uuid, Vec<ChannelParticipant>> = HashMap::new();
+    let mut participants_by_channel: HashMap<Uuid, Vec<String>> = HashMap::new();
     let mut all_user_ids: HashSet<String> = HashSet::new();
-    let placeholder_ts: DateTime<Utc> = DateTime::<Utc>::from_timestamp(0, 0).expect("epoch");
     for row in participant_rows {
-        let user_id = MacroUserIdStr::parse_from_str(&row.user_id)
-            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
-            .into_owned();
-        all_user_ids.insert(row.user_id);
+        all_user_ids.insert(row.user_id.clone());
         participants_by_channel
             .entry(row.channel_id)
             .or_default()
-            .push(ChannelParticipant {
-                channel_id: ChannelId(row.channel_id),
-                user_id,
-                role: ParticipantRole::Member,
-                joined_at: placeholder_ts,
-                left_at: None,
-            });
+            .push(row.user_id);
     }
 
     let user_id_strings: Vec<String> = all_user_ids.into_iter().collect();
@@ -130,18 +111,57 @@ async fn load_participants_and_names(
     .fetch_all(pool)
     .await?;
 
-    let mut name_lookup = NameLookup::new();
+    let mut name_lookup = HashMap::new();
     for row in name_rows {
         let Some(name) = display_name(row.first_name.as_deref(), row.last_name.as_deref()) else {
             continue;
         };
-        let user_id = MacroUserIdStr::parse_from_str(&row.user_profile_id)
-            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?
-            .into_owned();
-        name_lookup.insert(user_id, name);
+        name_lookup.insert(row.user_profile_id, name);
     }
 
     Ok((participants_by_channel, name_lookup))
+}
+
+fn resolve_channel_name(
+    channel_type: ChannelType,
+    stored_name: Option<&str>,
+    channel_id: Uuid,
+    viewer_user_id: &str,
+    participants: &[String],
+    name_lookup: &HashMap<String, String>,
+) -> String {
+    if let Some(name) = stored_name.filter(|name| !name.trim().is_empty()) {
+        return name.to_string();
+    }
+
+    match channel_type {
+        ChannelType::Public | ChannelType::Team => format!("#{}", &channel_id.to_string()[..8]),
+        ChannelType::Private => {
+            let mut names: Vec<_> = participants
+                .iter()
+                .filter(|id| id.as_str() != viewer_user_id)
+                .map(|id| display_name_for_user(id, name_lookup))
+                .collect();
+            names.sort();
+            if names.is_empty() {
+                "Private channel".to_string()
+            } else {
+                names.join(", ")
+            }
+        }
+        ChannelType::DirectMessage => participants
+            .iter()
+            .find(|id| id.as_str() != viewer_user_id)
+            .map(|id| display_name_for_user(id, name_lookup))
+            .unwrap_or_else(|| "Direct message".to_string()),
+    }
+}
+
+fn display_name_for_user(user_id: &str, name_lookup: &HashMap<String, String>) -> String {
+    name_lookup
+        .get(user_id)
+        .cloned()
+        .unwrap_or_else(|| user_id.to_string())
 }
 
 fn display_name(first: Option<&str>, last: Option<&str>) -> Option<String> {

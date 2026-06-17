@@ -10803,34 +10803,42 @@
         ],
         "properties": {
           "channel_type": {
-            "$ref": "#/components/schemas/ChannelType"
+            "$ref": "#/components/schemas/ChannelType",
+            "description": "type of the channel"
           },
           "created_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "timestamp of when the channel was created"
           },
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "uuid of the channel"
           },
           "name": {
-            "type": ["string", "null"]
+            "type": ["string", "null"],
+            "description": "string name of the channel"
           },
           "org_id": {
             "type": ["integer", "null"],
             "format": "int32",
+            "description": "id of the organization this channel belongs too",
             "minimum": 0
           },
           "owner_id": {
-            "type": "string"
+            "type": "string",
+            "description": "id of the user who created the channel"
           },
           "team_id": {
             "type": ["string", "null"],
-            "format": "uuid"
+            "format": "uuid",
+            "description": "id of the team this channel belongs to"
           },
           "updated_at": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "description": "timestamp of when the channel was last updated"
           }
         }
       },
