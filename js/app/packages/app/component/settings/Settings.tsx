@@ -1,6 +1,7 @@
 import { For, onMount, Show, Suspense } from 'solid-js';
 import { type SettingsTab, useSettingsState } from '@core/constant/SettingsState';
 import { useSettingsTabs } from '@core/constant/settingsTabsConfig';
+import { useLogout } from '@core/auth/logout';
 import { isMobile } from '@core/mobile/isMobile';
 import { MobileApp } from './MobileApp';
 import { Agent } from './Agent';
@@ -20,6 +21,7 @@ import { Button, SideNav } from '@ui';
 import ColumnsPlusRight from '@phosphor/columns-plus-right.svg';
 import ArrowsOut from '@phosphor/arrows-out.svg';
 import CloseIcon from '@phosphor/x.svg';
+import SignOutIcon from '@phosphor/sign-out.svg';
 import {
   SplitHeaderLeft,
   SplitHeaderRight,
@@ -50,6 +52,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
     setActiveTabId,
   } = useSettingsState();
   const { groups, flatTabs, isAvailable } = useSettingsTabs();
+  const logout = useLogout();
 
   const variant = () => props.variant ?? 'split';
 
@@ -241,6 +244,16 @@ export function SettingsPanel(props: SettingsPanelProps) {
                 </SideNav.Group>
               )}
             </For>
+            <div class="mt-auto border-t border-edge-muted pt-2">
+              <button
+                type="button"
+                onClick={() => logout()}
+                class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm text-ink-extra-muted cursor-default hover:bg-ink/3 hover:text-ink"
+              >
+                <SignOutIcon class="size-4 shrink-0" />
+                <span class="whitespace-nowrap">Log out</span>
+              </button>
+            </div>
           </SideNav>
         </Show>
 
