@@ -2700,6 +2700,7 @@
       "workspace-hack"
     ],
     "models_properties": [
+      "document_sub_type",
       "models_properties",
       "workspace-hack"
     ],
@@ -3135,6 +3136,7 @@
       "workspace-hack"
     ],
     "properties_db_client": [
+      "document_sub_type",
       "macro_uuid",
       "models_properties",
       "properties_db_client",
@@ -3411,6 +3413,7 @@
       "notification",
       "opensearch_client",
       "opensearch_query_builder",
+      "properties_db_client",
       "rate_limit",
       "remote_env_var",
       "s3_client",
@@ -3921,6 +3924,7 @@
     ],
     "system_properties": [
       "cowlike",
+      "document_sub_type",
       "macro_user_id",
       "macro_uuid",
       "models_properties",

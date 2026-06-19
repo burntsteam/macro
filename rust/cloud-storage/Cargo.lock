@@ -7669,6 +7669,7 @@ name = "models_properties"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "document_sub_type",
  "serde",
  "serde_json",
  "serde_with",
@@ -10659,10 +10660,12 @@ dependencies = [
  "model_file_type",
  "models_email",
  "models_opensearch",
+ "models_properties",
  "models_search",
  "nom 8.0.0",
  "opensearch_client",
  "pdfium-render",
+ "properties_db_client",
  "rust-embed",
  "s3_client",
  "s3_key",
