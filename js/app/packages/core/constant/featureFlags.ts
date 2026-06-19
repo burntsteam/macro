@@ -332,6 +332,16 @@ export const ENABLE_RAIL_CHAT_TASK_COMMENTS = resolveFeatureFlag(
   true
 );
 
+export const ENABLE_PR_DISCUSSION_INPUT = resolveFeatureFlag(
+  'ENABLE_PR_DISCUSSION_INPUT',
+  false
+);
+
+export const USE_MACRO_PR_SUMMARY_BLOCK = resolveFeatureFlag(
+  'USE_MACRO_PR_SUMMARY_BLOCK',
+  true
+);
+
 // skips over posthog and sets the ENABLE_TEAMS feature to true if we are in dev mode
 // can also be overridden via VITE_ENABLE_TEAMS env var
 export const ENABLE_TEAMS_OVERRIDE =
