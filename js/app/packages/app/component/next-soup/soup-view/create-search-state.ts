@@ -76,6 +76,13 @@ function filterDataToQueryFilters(data: QueryState): EntityFilters {
     };
   }
 
+  // Channel thread filters
+  if (include.channelThreadId?.length) {
+    filters.channel_thread_filters = {
+      thread_ids: include.channelThreadId,
+    };
+  }
+
   // Chat filters
   if (
     include.chatId?.length ||
