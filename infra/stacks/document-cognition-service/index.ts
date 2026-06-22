@@ -10,6 +10,7 @@ import {
   ServiceUrl,
   stack,
 } from '../../packages/shared';
+import { Queue } from '../../packages/resources';
 import { get_coparse_api_vpc } from '../../packages/vpc';
 import {
   DocumentCognitionService,
@@ -159,6 +160,17 @@ const { notificationIngressQueueName, notificationIngressQueueArn } =
 
 const { searchEventQueueName, searchEventQueueArn } = getSearchEventQueue();
 
+// ── AI projection queue ──────────────────────────────────────────────────────
+// This service both produces (on upsert) and consumes (via the inbound worker)
+// ai projection materialization messages, so the queue is owned here. The Queue
+// component provisions the queue, its DLQ, and the associated alarms.
+const aiProjectionQueue = new Queue('ai-projection', {
+  tags,
+  maxReceiveCount: 2,
+  // Give each message up to 2 minutes to process before it's re-queued.
+  visibilityTimeoutSeconds: 120,
+});
+
 const MACRO_API_TOKENS = getMacroApiToken();
 
 const documentCognitionService = new DocumentCognitionService(
@@ -185,6 +197,7 @@ const documentCognitionService = new DocumentCognitionService(
       deleteChatQueueArn,
       searchEventQueueArn,
       notificationIngressQueueArn,
+      aiProjectionQueue.queue.arn,
       ...aiTools.queueArns,
     ],
     connectionTablePolicyArn: connectionGatewayTablePolicyArn,
@@ -244,6 +257,10 @@ const documentCognitionService = new DocumentCognitionService(
         value: pulumi.interpolate`${searchEventQueueName}`,
       },
       {
+        name: 'AI_PROJECTION_QUEUE',
+        value: pulumi.interpolate`${aiProjectionQueue.queue.name}`,
+      },
+      {
         name: 'MACRO_API_TOKEN_ISSUER',
         value: pulumi.interpolate`${MACRO_API_TOKENS.macroApiTokenIssuer}`,
       },
@@ -297,3 +314,5 @@ export const documentCognitionServiceAlbSgId =
 export const documentCognitionServiceUrl = pulumi.interpolate`${documentCognitionService.domain}`;
 export const documentCognitionServiceRoleArn =
   documentCognitionService.role.arn;
+export const aiProjectionQueueArn = aiProjectionQueue.queue.arn;
+export const aiProjectionQueueName = aiProjectionQueue.queue.name;

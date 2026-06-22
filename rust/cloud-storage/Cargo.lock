@@ -99,6 +99,7 @@ name = "ai_projections"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aws-sdk-sqs",
  "axum",
  "chrono",
  "http-body-util",
@@ -106,10 +107,13 @@ dependencies = [
  "macro_user_id",
  "model-error-response",
  "model_user",
+ "models_ai_projection",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "sqlx",
+ "sqs_client",
+ "sqs_worker",
  "thiserror 2.0.18",
  "tokio",
  "tower 0.5.3",
@@ -3567,6 +3571,7 @@ dependencies = [
  "soup",
  "sqlx",
  "sqs_client",
+ "sqs_worker",
  "static_file",
  "stream",
  "strum",
@@ -7587,6 +7592,14 @@ dependencies = [
  "thiserror 2.0.18",
  "utoipa",
  "uuid",
+ "workspace-hack",
+]
+
+[[package]]
+name = "models_ai_projection"
+version = "0.1.0"
+dependencies = [
+ "serde",
  "workspace-hack",
 ]
 
@@ -11725,6 +11738,7 @@ dependencies = [
  "email",
  "futures",
  "model",
+ "models_ai_projection",
  "models_email",
  "s3_key",
  "serde",
