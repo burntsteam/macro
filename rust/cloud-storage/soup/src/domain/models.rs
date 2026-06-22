@@ -6,7 +6,7 @@ pub use grouping::{
 };
 
 use call::domain::models::GetCallRecordsRequest;
-use channels::domain::models::GetChannelsRequest;
+use channels::domain::models::{GetChannelsRequest, GetThreadReplyRowsRequest};
 use crm::domain::auth::CrmTeamReceipt;
 use crm::domain::companies_repo::{CrmCompanyListSort, CrmCompanySoupCursor};
 use email::domain::models::{GetEmailsRequest, PreviewView};
@@ -472,6 +472,36 @@ impl SoupRequest<Option<EntityFilterAst>> {
                 // query by frecency not yet implemented for channels
                 SoupQuery::Frecency(_) => None,
             }?,
+        })
+    }
+
+    pub(crate) fn build_comms_thread_request(&self) -> Option<GetThreadReplyRowsRequest> {
+        let query = match &self.cursor {
+            SoupQuery::Simple(SimpleQueryInner(Query::Sort(t, f))) => Some(Query::Sort(
+                *t,
+                f.as_ref().and_then(|f| f.channel_thread_filter.clone()),
+            )),
+            SoupQuery::Simple(SimpleQueryInner(Query::Cursor(CursorWithValAndFilter {
+                id,
+                limit,
+                val,
+                filter,
+            }))) => Some(Query::Cursor(CursorWithValAndFilter {
+                id: *id,
+                limit: *limit,
+                val: val.clone(),
+                filter: filter
+                    .as_ref()
+                    .and_then(|f| f.channel_thread_filter.clone()),
+            })),
+            // query by frecency not yet implemented for channel threads
+            SoupQuery::Frecency(_) => None,
+        }?;
+
+        Some(GetThreadReplyRowsRequest {
+            macro_id: self.user.clone(),
+            limit: Some(self.limit as u32),
+            query,
         })
     }
 
