@@ -101,135 +101,275 @@ pub struct LatestMessage {
     pub latest_non_thread_message: Option<ChannelMessage>,
 }
 
+/// A channel as displayed in Soup.
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct SoupChannel {
+    /// Channel metadata and participants.
     #[serde(flatten)]
     pub channel: ChannelWithParticipants,
+    /// Latest message metadata for the channel.
     #[serde(flatten)]
     pub latest_message: LatestMessage,
+    /// Timestamp when the requesting user last viewed this channel.
     pub viewed_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// Timestamp when the requesting user last interacted with this channel.
     pub interacted_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// A top-level channel message thread for soup payloads.
+///
+/// This reuses the existing lightweight [`ChannelMessage`] shape used by
+/// [`SoupChannel`] latest-message data.
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
+pub struct SoupChannelThread {
+    /// Channel that owns the thread.
+    #[cfg_attr(feature = "schema", schema(value_type = Uuid))]
+    pub channel_id: ChannelId,
+    /// Top-level message that acts as the thread parent.
+    pub root_message: ChannelMessage,
+    /// Thread replies, using the same lightweight channel message shape.
+    pub messages: Vec<ChannelMessage>,
+}
+
+impl SoupChannelThread {
+    /// Latest update timestamp across the parent message and replies.
+    pub fn updated_at(&self) -> chrono::DateTime<chrono::Utc> {
+        self.messages
+            .iter()
+            .map(|message| message.updated_at)
+            .max()
+            .unwrap_or(self.root_message.updated_at)
+            .max(self.root_message.updated_at)
+    }
+}
+
+/// Channel metadata together with its participants.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct ChannelWithParticipants {
+    /// Channel metadata.
     pub channel: Channel,
+    /// Participants in the channel.
     pub participants: Vec<ChannelParticipant>,
 }
 
+/// A user's membership in a channel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(utoipa::ToSchema))]
 pub struct ChannelParticipant {
+    /// Channel id for the participant membership.
     #[cfg_attr(feature = "schema", schema(value_type = Uuid))]
     pub channel_id: ChannelId,
+    /// Participant user id.
     #[cfg_attr(feature = "schema", schema(value_type = String))]
     pub user_id: macro_user_id::user_id::MacroUserIdStr<'static>,
+    /// Participant role in the channel.
     pub role: ParticipantRole,
+    /// Timestamp when the participant joined the channel.
     pub joined_at: chrono::DateTime<chrono::Utc>,
+    /// Timestamp when the participant left the channel, if any.
     pub left_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-fn channel_type_from_channels(channel_type: channels::domain::models::ChannelType) -> ChannelType {
-    match channel_type {
-        channels::domain::models::ChannelType::Public => ChannelType::Public,
-        channels::domain::models::ChannelType::Private => ChannelType::Private,
-        channels::domain::models::ChannelType::DirectMessage => ChannelType::DirectMessage,
-        channels::domain::models::ChannelType::Team => ChannelType::Team,
+impl ChannelType {
+    /// Converts a channels-domain channel type into the Soup channel type.
+    pub fn new_from_channels(channel_type: channels::domain::models::ChannelType) -> Self {
+        match channel_type {
+            channels::domain::models::ChannelType::Public => Self::Public,
+            channels::domain::models::ChannelType::Private => Self::Private,
+            channels::domain::models::ChannelType::DirectMessage => Self::DirectMessage,
+            channels::domain::models::ChannelType::Team => Self::Team,
+        }
     }
 }
 
-fn participant_role_from_channels(
-    role: channels::domain::models::ParticipantRole,
-) -> ParticipantRole {
-    match role {
-        channels::domain::models::ParticipantRole::Owner => ParticipantRole::Owner,
-        channels::domain::models::ParticipantRole::Admin => ParticipantRole::Admin,
-        channels::domain::models::ParticipantRole::Member => ParticipantRole::Member,
+impl ParticipantRole {
+    /// Converts a channels-domain participant role into the Soup participant role.
+    pub fn new_from_channels(role: channels::domain::models::ParticipantRole) -> Self {
+        match role {
+            channels::domain::models::ParticipantRole::Owner => Self::Owner,
+            channels::domain::models::ParticipantRole::Admin => Self::Admin,
+            channels::domain::models::ParticipantRole::Member => Self::Member,
+        }
     }
 }
 
-fn channel_message_from_channels(
-    message: channels::domain::models::RecentChannelMessage,
-) -> ChannelMessage {
-    ChannelMessage {
-        message_id: message.message_id,
-        thread_id: message.thread_id,
-        sender_id: message.sender_id,
-        content: message.content,
-        created_at: message.created_at,
-        updated_at: message.updated_at,
-        deleted_at: message.deleted_at,
-        mentions: message.mentions,
+impl Channel {
+    /// Converts a channels-domain list item into Soup channel metadata.
+    pub fn new_from_channels(channel: channels::domain::models::ChannelListItem) -> Self {
+        Self {
+            id: ChannelId(channel.id),
+            name: channel.name,
+            channel_type: ChannelType::new_from_channels(channel.channel_type),
+            org_id: channel
+                .org_id
+                .and_then(|org_id| u32::try_from(org_id).ok())
+                .map(OrganizationId),
+            team_id: channel.team_id,
+            created_at: channel.created_at,
+            updated_at: channel.updated_at,
+            owner_id: channel.owner_id,
+        }
     }
 }
 
-fn channel_from_channels(channel: channels::domain::models::ChannelListItem) -> Channel {
-    Channel {
-        id: ChannelId(channel.id),
-        name: channel.name,
-        channel_type: channel_type_from_channels(channel.channel_type),
-        org_id: channel
-            .org_id
-            .and_then(|org_id| u32::try_from(org_id).ok())
-            .map(OrganizationId),
-        team_id: channel.team_id,
-        created_at: channel.created_at,
-        updated_at: channel.updated_at,
-        owner_id: channel.owner_id,
+impl ChannelMessage {
+    /// Converts a channels-domain recent message into a Soup channel message.
+    pub fn new_from_recent_channel_message(
+        message: channels::domain::models::RecentChannelMessage,
+    ) -> Self {
+        Self {
+            message_id: message.message_id,
+            thread_id: message.thread_id,
+            sender_id: message.sender_id,
+            content: message.content,
+            created_at: message.created_at,
+            updated_at: message.updated_at,
+            deleted_at: message.deleted_at,
+            mentions: message.mentions,
+        }
+    }
+
+    /// Converts a channels-domain channel message into a Soup channel message.
+    pub fn new_from_channel_message(message: channels::domain::models::ChannelMessage) -> Self {
+        Self {
+            message_id: message.id,
+            thread_id: None,
+            sender_id: message.sender_id,
+            content: message.content,
+            created_at: message.created_at,
+            updated_at: message.updated_at,
+            deleted_at: message.deleted_at,
+            mentions: Vec::new(),
+        }
+    }
+
+    /// Converts a channels-domain thread reply into a Soup channel message.
+    pub fn new_from_thread_reply(
+        parent_id: Uuid,
+        reply: channels::domain::models::ThreadReply,
+    ) -> Self {
+        Self {
+            message_id: reply.id,
+            thread_id: Some(parent_id),
+            sender_id: reply.sender_id,
+            content: reply.content,
+            created_at: reply.created_at,
+            updated_at: reply.updated_at,
+            deleted_at: None,
+            mentions: Vec::new(),
+        }
     }
 }
 
-fn latest_message_from_channels(
-    latest_message: channels::domain::models::LatestMessage,
-) -> LatestMessage {
-    LatestMessage {
-        latest_message: latest_message
-            .latest_message
-            .map(channel_message_from_channels),
-        latest_non_thread_message: latest_message
-            .latest_non_thread_message
-            .map(channel_message_from_channels),
+impl LatestMessage {
+    /// Converts channels-domain latest message data into Soup latest message data.
+    pub fn new_from_channels(latest_message: channels::domain::models::LatestMessage) -> Self {
+        Self {
+            latest_message: latest_message
+                .latest_message
+                .map(ChannelMessage::new_from_recent_channel_message),
+            latest_non_thread_message: latest_message
+                .latest_non_thread_message
+                .map(ChannelMessage::new_from_recent_channel_message),
+        }
     }
 }
 
-impl TryFrom<channels::domain::models::ChannelParticipant> for ChannelParticipant {
-    type Error = macro_user_id::error::ParseErr;
-
-    fn try_from(
+impl ChannelParticipant {
+    /// Converts a channels-domain participant into a Soup participant.
+    pub fn try_new_from_channels(
         participant: channels::domain::models::ChannelParticipant,
-    ) -> Result<Self, Self::Error> {
+    ) -> Result<Self, macro_user_id::error::ParseErr> {
         Ok(Self {
             channel_id: ChannelId(participant.channel_id),
             user_id: MacroUserIdStr::parse_from_str(&participant.user_id)?.into_owned(),
-            role: participant_role_from_channels(participant.role),
+            role: ParticipantRole::new_from_channels(participant.role),
             joined_at: participant.joined_at,
             left_at: participant.left_at,
         })
     }
 }
 
-impl From<channels::domain::models::ChannelWithParticipants> for ChannelWithParticipants {
-    fn from(channel: channels::domain::models::ChannelWithParticipants) -> Self {
+impl ChannelWithParticipants {
+    /// Converts channels-domain metadata and participants into the Soup shape.
+    pub fn new_from_channels(channel: channels::domain::models::ChannelWithParticipants) -> Self {
         Self {
-            channel: channel_from_channels(channel.channel),
+            channel: Channel::new_from_channels(channel.channel),
             participants: channel
                 .participants
                 .into_iter()
-                .filter_map(|participant| participant.try_into().ok())
+                .filter_map(|participant| {
+                    ChannelParticipant::try_new_from_channels(participant).ok()
+                })
                 .collect(),
         }
     }
 }
 
-impl From<channels::domain::models::ChannelWithLatest> for SoupChannel {
-    fn from(channel: channels::domain::models::ChannelWithLatest) -> Self {
+impl SoupChannel {
+    /// Converts channels-domain channel data with latest messages into Soup.
+    pub fn new_from_channels(channel: channels::domain::models::ChannelWithLatest) -> Self {
         Self {
-            channel: channel.channel.into(),
-            latest_message: latest_message_from_channels(channel.latest_message),
+            channel: ChannelWithParticipants::new_from_channels(channel.channel),
+            latest_message: LatestMessage::new_from_channels(channel.latest_message),
             viewed_at: channel.viewed_at,
             interacted_at: channel.interacted_at,
+        }
+    }
+}
+
+impl SoupChannelThread {
+    /// Converts a channels-domain channel message with preview replies into a Soup thread.
+    pub fn new_from_channel_message(message: channels::domain::models::ChannelMessage) -> Self {
+        let channels::domain::models::ChannelMessage {
+            id,
+            channel_id,
+            sender_id,
+            content,
+            created_at,
+            updated_at,
+            deleted_at,
+            thread,
+            ..
+        } = message;
+        let messages = thread
+            .preview
+            .into_iter()
+            .map(|reply| ChannelMessage::new_from_thread_reply(id, reply))
+            .collect();
+
+        Self {
+            channel_id: ChannelId(channel_id),
+            root_message: ChannelMessage {
+                message_id: id,
+                thread_id: None,
+                sender_id,
+                content,
+                created_at,
+                updated_at,
+                deleted_at,
+                mentions: Vec::new(),
+            },
+            messages,
+        }
+    }
+
+    /// Converts a channels-domain channel message and replies into a Soup thread.
+    pub fn new_from_channel_message_and_replies(
+        message: channels::domain::models::ChannelMessage,
+        replies: Vec<channels::domain::models::ThreadReply>,
+    ) -> Self {
+        let parent_id = message.id;
+        Self {
+            channel_id: ChannelId(message.channel_id),
+            root_message: ChannelMessage::new_from_channel_message(message),
+            messages: replies
+                .into_iter()
+                .map(|reply| ChannelMessage::new_from_thread_reply(parent_id, reply))
+                .collect(),
         }
     }
 }
