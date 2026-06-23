@@ -16,6 +16,7 @@ import {
   DocumentCognitionService,
   SERVICE_DOMAIN_NAME,
 } from './document-cognition-service';
+import { AiProjectionsRefreshTrigger } from './ai-projections-refresh-trigger';
 
 const tags = {
   environment: stack,
@@ -29,6 +30,13 @@ const tags = {
 const DATABASE_URL = aws.secretsmanager
   .getSecretVersionOutput({
     secretId: config.require(`macro_db_secret_key`),
+  })
+  .apply((secret) => secret.secretString);
+
+// NOTE: NEVER EVER EVER EXPORT THIS. ITS A SECRET VALUE
+const PROXY_DATABASE_URL = aws.secretsmanager
+  .getSecretVersionOutput({
+    secretId: config.require(`macro_db_proxy_secret_key`),
   })
   .apply((secret) => secret.secretString);
 
@@ -170,6 +178,27 @@ const aiProjectionQueue = new Queue('ai-projection', {
   // Give each message up to 2 minutes to process before it's re-queued.
   visibilityTimeoutSeconds: 120,
 });
+
+// Background refresh: scheduled lambda that sweeps user_ai_projection per
+// cadence, deleting inactive instances and enqueuing refreshes for stale ones
+// onto the ai projection queue owned above.
+const aiProjectionsRefreshTrigger = new AiProjectionsRefreshTrigger(
+  `ai-projections-refresh-trigger-${stack}`,
+  {
+    envVars: {
+      AI_PROJECTION_QUEUE: pulumi.interpolate`${aiProjectionQueue.queue.name}`,
+      DATABASE_URL: pulumi.interpolate`${PROXY_DATABASE_URL}`,
+      ENVIRONMENT: stack,
+      RUST_LOG: 'ai_projections_refresh_handler=trace,sqs_client=trace',
+    },
+    aiProjectionQueueArn: aiProjectionQueue.queue.arn,
+    vpc: coparse_api_vpc,
+    tags,
+  }
+);
+
+export const aiProjectionsRefreshTriggerLambdaName =
+  aiProjectionsRefreshTrigger.lambda.name;
 
 const MACRO_API_TOKENS = getMacroApiToken();
 
