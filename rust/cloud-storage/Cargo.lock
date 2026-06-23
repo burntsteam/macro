@@ -6988,7 +6988,6 @@ dependencies = [
  "tracing",
  "url",
  "urlencoding",
- "user_quota",
  "uuid",
  "workspace-hack",
 ]
